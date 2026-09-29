@@ -95,7 +95,7 @@ def run():
             assert download.value.suggested_filename.endswith('-jenerik.docx'), download.value.suggested_filename
             page.locator('#issues-pane').screenshot(path=str(QA / 'issues.png'))
             page.locator('#articles-tab').click()
-            expect(page.locator('#btn-pdf')).to_be_visible()
+            expect(page.locator('#btn-pdf')).to_have_count(0)
 
             # The APA report is built with text nodes only.
             page.evaluate('''() => renderApaReport({enabled:true,warnings:[{code:'x',message:'Mesaj',count:3,examples:['<img src=x onerror=alert(1)>']}]})''')

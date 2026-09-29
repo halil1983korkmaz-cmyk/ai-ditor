@@ -1,18 +1,16 @@
-"""Issue front matter (template fill and generated), banner logo, numbered outputs and PDF."""
+"""Issue front matter (template fill and generated), banner logo and numbered Word outputs."""
 import io
 import json
 from pathlib import Path
 import tempfile
 import unittest
 import zipfile
-from unittest.mock import patch
 
 from docx import Document
 from docx.oxml.ns import qn
 
 import app as application
 import issue_export
-import pdf_export
 from docx_export import generate_docx_from_form
 from journal_templates import normalize_settings
 from test_accounts import make_setup, register, headers
@@ -135,8 +133,8 @@ class IssueApiTests(unittest.TestCase):
         conflict = self.client.put('/api/issues/' + self.issue, json={'data': {'first_page': '1', 'articles': []}, 'base_revision': 0}, headers=self.h)
         self.assertEqual(conflict.status_code, 409)
 
-    def test_word_outputs_number_pages_consecutively_without_libreoffice(self):
-        with patch.object(pdf_export, 'find_office', return_value=None):
+    def test_word_outputs_number_pages_consecutively(self):
+        if True:
             response = self.build('articles_docx')
             self.assertEqual(response.status_code, 200, response.json)
             self.assertEqual([(r['start'], r['end']) for r in response.json['ranges']], [(5, 20), (21, 21)])
@@ -152,37 +150,6 @@ class IssueApiTests(unittest.TestCase):
             issue_zip = self.build('issue_docx')
             names = zipfile.ZipFile(io.BytesIO(self.client.get('/download_file/' + issue_zip.json['key'], headers=self.h).data)).namelist()
             self.assertEqual(names[0], '00-jenerik.docx')
-
-    def test_pdf_outputs_report_missing_libreoffice(self):
-        with patch.object(pdf_export, 'find_office', return_value=None):
-            response = self.build('issue_pdf')
-            self.assertEqual(response.status_code, 400)
-            self.assertIn('LibreOffice', response.json['error'])
-
-    @unittest.skipUnless(pdf_export.pdf_available(), 'LibreOffice is not installed')
-    def test_real_pdf_outputs_and_numbering(self):
-        pages = self.build('pages')
-        self.assertEqual(pages.status_code, 200, pages.json)
-        ranges = pages.json['ranges']
-        self.assertEqual(ranges[0]['start'], 5)
-        self.assertEqual(ranges[1]['start'], ranges[0]['end'] + 1)
-        merged = self.build('issue_pdf')
-        self.assertEqual(merged.status_code, 200, merged.json)
-        pdf = self.client.get('/download_file/' + merged.json['key'], headers=self.h).data
-        self.assertTrue(pdf.startswith(b'%PDF'))
-        # cover + imprint + contents + articles
-        self.assertGreaterEqual(pdf_export.page_count(pdf), 4)
-        front = self.build('frontmatter_pdf')
-        self.assertTrue(self.client.get('/download_file/' + front.json['key'], headers=self.h).data.startswith(b'%PDF'))
-
-    @unittest.skipUnless(pdf_export.pdf_available(), 'LibreOffice is not installed')
-    def test_article_pdf_endpoint(self):
-        data = article_project('PDF makale', 3)['data']
-        settings = {**PRESET['settings']}
-        form = {'data': json.dumps(data), 'journal_settings': json.dumps(settings)}
-        response = self.client.post('/process_pdf', data=form, headers=self.h)
-        self.assertEqual(response.status_code, 200, response.json)
-        self.assertTrue(self.client.get('/download_file/' + response.json['key'], headers=self.h).data.startswith(b'%PDF'))
 
 
 if __name__ == '__main__':

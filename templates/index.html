@@ -321,18 +321,14 @@ textarea { resize:vertical; }
  <div class="mt-2"><span id="issue-save-status" role="status" aria-live="polite"></span></div>
  </form>
  <div id="issue-outputs" class="settings-section" hidden><span class="eyebrow">ÇIKTILAR</span>
-  <p id="issue-pdf-note" class="mb-2" hidden><small>PDF çıktıları için bilgisayarda LibreOffice kurulu olmalıdır (libreoffice.org). Word çıktıları LibreOffice olmadan alınır; sayfa aralıkları bu durumda makalelerin kayıtlı bitiş sayfalarından alınır.</small></p>
   <div class="row g-3">
    <div class="col-md-6"><h3 class="h6">Jenerik ön sayfalar</h3>
-    <button type="button" class="btn btn-outline-primary mb-2 me-2" data-issue-build="frontmatter_docx"><i class="bi bi-file-earmark-word me-1"></i>Jenerik · Word</button>
-    <button type="button" class="btn btn-outline-primary mb-2" data-issue-build="frontmatter_pdf" data-needs-pdf><i class="bi bi-file-earmark-pdf me-1"></i>Jenerik · PDF</button></div>
+    <button type="button" class="btn btn-outline-primary mb-2 me-2" data-issue-build="frontmatter_docx"><i class="bi bi-file-earmark-word me-1"></i>Jenerik · Word</button></div>
    <div class="col-md-6"><h3 class="h6">Makaleler (numaralanmış)</h3>
-    <button type="button" class="btn btn-outline-primary mb-2 me-2" data-issue-build="articles_docx"><i class="bi bi-file-earmark-word me-1"></i>Makaleler · Word (ZIP)</button>
-    <button type="button" class="btn btn-outline-primary mb-2" data-issue-build="articles_pdf" data-needs-pdf><i class="bi bi-file-earmark-pdf me-1"></i>Makaleler · PDF (ZIP)</button></div>
+    <button type="button" class="btn btn-outline-primary mb-2 me-2" data-issue-build="articles_docx"><i class="bi bi-file-earmark-word me-1"></i>Makaleler · Word (ZIP)</button></div>
    <div class="col-12"><h3 class="h6">Tüm sayı</h3>
-    <button type="button" class="btn btn-jgttr mb-2 me-2" data-issue-build="issue_pdf" data-needs-pdf><i class="bi bi-file-earmark-pdf me-1"></i>Tüm sayı · tek PDF</button>
-    <button type="button" class="btn btn-outline-primary mb-2 me-2" data-issue-build="issue_docx"><i class="bi bi-file-earmark-word me-1"></i>Tüm sayı · Word (ZIP)</button>
-    <button type="button" class="btn btn-outline-secondary mb-2" data-issue-build="pages" data-needs-pdf>Sayfa aralıklarını hesapla</button></div>
+    <button type="button" class="btn btn-jgttr mb-2 me-2" data-issue-build="issue_docx"><i class="bi bi-file-earmark-word me-1"></i>Tüm sayı · Word (ZIP)</button>
+    <button type="button" class="btn btn-outline-secondary mb-2" data-issue-build="pages">Sayfa aralıklarını hesapla</button></div>
   </div>
   <p id="issue-build-status" class="mt-2 mb-2" role="status" aria-live="polite"></p>
   <table class="table table-sm" id="issue-ranges" hidden><thead><tr><th>Makale</th><th>Sayfalar</th></tr></thead><tbody></tbody></table>
@@ -672,7 +668,6 @@ textarea { resize:vertical; }
     <input id="project-file" type="file" accept=".json" hidden onchange="loadProject(this.files[0])">
   </div>
   <button id="btn-docx" class="btn btn-outline-primary btn-lg px-4 py-3 me-2 mb-2" onclick="doGenerate('docx')"><i class="bi bi-file-earmark-word me-2"></i>Word (.docx) oluştur</button>
-  <button id="btn-pdf" class="btn btn-outline-primary btn-lg px-4 py-3 me-2 mb-2" onclick="doGenerate('pdf')"><i class="bi bi-file-earmark-pdf me-2"></i>PDF oluştur</button>
   <button id="btn-gen" class="btn btn-jgttr btn-lg px-5 py-3" onclick="doGenerate()">
     <i class="bi bi-gear-fill me-2"></i>LaTeX Oluştur &amp; ZIP İndir
   </button>
@@ -688,7 +683,6 @@ textarea { resize:vertical; }
       <i class="bi bi-download me-2"></i>ZIP İndir
     </button>
     <button id="dl-docx" type="button" class="btn btn-success btn-lg px-4" onclick="downloadArticleDocx()" hidden>Word (.docx) indir</button>
-    <button id="dl-pdf" type="button" class="btn btn-success btn-lg px-4" onclick="saveOutputFile(this.dataset.downloadUrl, 'aiditor_article.pdf', 'application/pdf', document.getElementById('docx-download-status'))" hidden>PDF indir</button>
     <p id="docx-download-status" class="mt-3 mb-0" role="status" aria-live="polite"></p>
     <p id="citation-result" class="mt-3 mb-0"></p>
     <div id="apa-result" class="mt-2" role="status"></div>
@@ -2042,7 +2036,6 @@ async function doGenerate(kind = 'zip') {
   const btn = document.getElementById('btn-gen');
   btn.disabled = true;
   document.getElementById('btn-docx').disabled = true;
-  document.getElementById('btn-pdf').disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Oluşturuluyor...';
   document.getElementById('result-panel').style.display = 'none';
   document.getElementById('err-panel').style.display = 'none';
@@ -2065,19 +2058,18 @@ async function doGenerate(kind = 'zip') {
       fd.append('fig_' + uid, file, 'fig_' + uid + '.' + ext);
     }
 
-    const resp = await aiditorFetch(kind === 'docx' ? '/process_docx' : kind === 'pdf' ? '/process_pdf' : '/process_form', { method:'POST', body:fd });
+    const resp = await aiditorFetch(kind === 'docx' ? '/process_docx' : '/process_form', { method:'POST', body:fd });
     if (!resp.headers.get('Content-Type')?.includes('application/json')) throw new Error('Uygulama servisi geçersiz yanıt verdi. Güncel uygulamayı yeniden başlatın.');
     const res = await resp.json();
     if(!resp.ok || !res.ok) throw new Error(res.error || 'Bilinmeyen hata');
 
-    const word = kind === 'docx', pdf = kind === 'pdf';
-    document.getElementById(pdf ? 'dl-pdf' : word ? 'dl-docx' : 'dl-link').dataset.downloadUrl = (pdf ? '/download_file/' : word ? '/download_docx/' : '/download/') + res.key;
-    document.getElementById('dl-link').hidden = word || pdf;
+    const word = kind === 'docx';
+    document.getElementById(word ? 'dl-docx' : 'dl-link').dataset.downloadUrl = (word ? '/download_docx/' : '/download/') + res.key;
+    document.getElementById('dl-link').hidden = word;
     document.getElementById('dl-docx').hidden = !word;
-    document.getElementById('dl-pdf').hidden = !pdf;
-    document.getElementById('latex-next-steps').hidden = word || pdf;
+    document.getElementById('latex-next-steps').hidden = word;
     document.getElementById('word-next-steps').hidden = !word;
-    document.getElementById('result-title').textContent = pdf ? 'Tamamlandı — PDF hazır' : word ? 'Tamamlandı — Word belgesi hazır' : 'Tamamlandı — ZIP hazır';
+    document.getElementById('result-title').textContent = word ? 'Tamamlandı — Word belgesi hazır' : 'Tamamlandı — ZIP hazır';
     document.getElementById('docx-download-status').textContent = '';
     const report = res.citations;
     document.getElementById('citation-result').textContent = report?.enabled ? `${report.linked_in_body} metin içi atıf kaynakçaya bağlandı. ${report.ambiguous_references} belirsiz, ${report.unrecognized_references} tanınmayan kaynak kaydı. Bağlantısız atıfları son kontrolde gözden geçirin.` : 'Atıf bağlantıları kapalı.';
@@ -2094,7 +2086,6 @@ async function doGenerate(kind = 'zip') {
   } finally {
     btn.disabled = false;
     document.getElementById('btn-docx').disabled = false;
-    document.getElementById('btn-pdf').disabled = false;
     btn.innerHTML = '<i class="bi bi-gear-fill me-2"></i>LaTeX Oluştur &amp; ZIP İndir';
   }
 }

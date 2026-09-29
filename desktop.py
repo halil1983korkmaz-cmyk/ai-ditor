@@ -25,13 +25,13 @@ class ArticleDownloads:
         return self._save_package(encoded, 'docx')
 
     def save_output(self, filename, encoded):
-        """Save a PDF, Word or ZIP output chosen by name (issue exports, article PDF)."""
+        """Save a Word or ZIP output chosen by name (issue exports)."""
         if not self._lock.acquire(blocking=False):
             return {'ok': False, 'error': 'Açık olan kaydetme penceresini tamamlayın.'}
         temporary = None
         try:
             suffix = Path(str(filename)).suffix.lower()
-            if suffix not in {'.pdf', '.docx', '.zip'} or len(str(filename)) > 120 or '/' in str(filename) or '\\' in str(filename):
+            if suffix not in {'.docx', '.zip'} or len(str(filename)) > 120 or '/' in str(filename) or '\\' in str(filename):
                 raise ValueError('Dosya adı geçersiz.')
             if not isinstance(encoded, str) or len(encoded) > 400 * 1024 * 1024:
                 raise ValueError('Dosya çok büyük veya geçersiz.')
@@ -39,7 +39,7 @@ class ArticleDownloads:
                 blob = base64.b64decode(encoded, validate=True)
             except (ValueError, binascii.Error) as exc:
                 raise ValueError('Dosya verisi çözülemedi. Çıktıyı yeniden oluşturun.') from exc
-            if (suffix == '.pdf' and not blob.startswith(b'%PDF')) or (suffix != '.pdf' and not blob.startswith(b'PK\x03\x04')):
+            if not blob.startswith(b'PK\x03\x04'):
                 raise ValueError('Geçerli bir çıktı dosyası alınamadı. Çıktıyı yeniden oluşturun.')
             import webview
             selected = self._window.create_file_dialog(webview.FileDialog.SAVE, save_filename=str(filename),

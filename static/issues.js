@@ -1,7 +1,7 @@
 /* Sayı ve jenerik: issue documents, article order, front matter and numbered outputs. */
 window.issueWorkspace = (() => {
   const byId = id => document.getElementById(id);
-  let issues = [], current = null, articles = [], pdfAvailable = false, timer = null, saving = null, dirty = false;
+  let issues = [], current = null, articles = [], timer = null, saving = null, dirty = false;
   const json = async (url, options = {}) => {
     const response = await aiditorFetch(url, {...options, headers: {'Content-Type': 'application/json', ...(options.headers || {})}});
     const result = await response.json().catch(() => ({}));
@@ -13,11 +13,9 @@ window.issueWorkspace = (() => {
 
   async function refreshList(selectId) {
     const result = await json('/api/issues');
-    issues = result.issues; pdfAvailable = result.pdf_available;
+    issues = result.issues;
     const select = byId('issue-select'); select.replaceChildren();
     for (const item of issues) { const option = document.createElement('option'); option.value = item.id; option.textContent = item.title; select.append(option); }
-    byId('issue-pdf-note').hidden = pdfAvailable;
-    document.querySelectorAll('[data-needs-pdf]').forEach(button => { button.disabled = !pdfAvailable; });
     const id = selectId || (issues[0] && issues[0].id);
     if (id) { select.value = id; await open(id); } else { current = null; byId('issue-form').hidden = true; byId('issue-outputs').hidden = true; byId('issue-delete').disabled = true; }
   }
@@ -92,7 +90,7 @@ window.issueWorkspace = (() => {
     const buttons = document.querySelectorAll('[data-issue-build]'); const out = byId('issue-build-status');
     if (!await flush() && dirty) { out.textContent = 'Önce sayı kaydı tamamlanmalıdır.'; return; }
     buttons.forEach(b => { b.disabled = true; });
-    out.textContent = 'Hazırlanıyor… PDF çıktıları makale sayısına göre birkaç dakika sürebilir.';
+    out.textContent = 'Hazırlanıyor…';
     try {
       const result = await json('/api/issues/' + current.id + '/build', {method: 'POST', body: JSON.stringify({kind})});
       const body = byId('issue-ranges').querySelector('tbody'); body.replaceChildren();
@@ -102,16 +100,11 @@ window.issueWorkspace = (() => {
       }
       byId('issue-ranges').hidden = !(result.ranges || []).length;
       if (result.key) {
-        const mime = result.filename.endsWith('.pdf') ? 'application/pdf' : (result.filename.endsWith('.zip') ? 'application/zip' : 'application/zip');
-        if (result.filename.endsWith('.docx')) { await saveWord('/download_file/' + result.key, result.filename, out); }
-        else await saveOutputFile('/download_file/' + result.key, result.filename, mime, out);
+        await saveOutputFile('/download_file/' + result.key, result.filename, 'application/zip', out);
       } else out.textContent = 'Sayfa aralıkları hesaplandı.';
     } catch (error) { out.textContent = 'Hata: ' + error.message; }
-    finally { buttons.forEach(b => { b.disabled = b.hasAttribute('data-needs-pdf') && !pdfAvailable; }); }
+    finally { buttons.forEach(b => { b.disabled = false; }); }
   }
-
-  // Word files are ZIP containers, so the generic saver's ZIP signature check applies.
-  const saveWord = (url, filename, el) => saveOutputFile(url, filename, 'application/zip', el);
 
   function init() {
     byId('issue-new').addEventListener('click', async () => {

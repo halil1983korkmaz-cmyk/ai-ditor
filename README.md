@@ -22,12 +22,11 @@ macOS 13 veya üzerinde DMG içindeki **AI-ditor Plus** uygulamasını **Applica
 
 “07 / APA 7 kuralları” bölümü üst bilgideki kısa yazar biçimini, kaynakça sırasını ve çıktıdan sonra gösterilen APA 7 denetimini belirler: iki yazar arasında `&`/`ve`/`and`, üç ve üzeri yazarda `vd.`/`et al.`, sayfa göstergesi `s.`/`ss.` ya da `p.`/`pp.`, tarihsiz kaynak için `t.y.`/`n.d.`, kaynakçada en çok 20 yazar, DOI biçimi, aynı yazar ve yıl için a/b eki ve metinde eşleşmeyen kaynaklar. Denetim yalnızca uyarır; makale metnini ve kaynakları değiştirmez. Aynı denetim `POST /api/apa_check` ile de çalıştırılır.
 
-## Sayı hazırlama, jenerik ön sayfalar ve PDF
+## Sayı hazırlama ve jenerik ön sayfalar
 
-- **PDF çıktısı:** Makale ekranında **PDF oluştur** düğmesi vardır; Word ve PDF ayrı ayrı alınır. PDF, Word belgesinin LibreOffice ile dönüştürülmesiyle üretilir (aynı görünüm). LibreOffice kurulu değilse uygulama bunu açıkça bildirir; Word çıktısı etkilenmez. Farklı bir konum için `AIDITOR_SOFFICE` ortam değişkeni kullanılabilir.
 - **Logo bandı:** Ayarlarda “Logo yerleşimi → Bant” ve “Logo genişliği (cm)” seçilebilir. Bantta görsel makale kapağının üstünde tüm metin genişliğinde (ya da girilen genişlikte) yer alır; yanda logo seçildiğinde de genişlik ayarlanır.
 - **Jenerik ön sayfalar:** **Dergi tasarımı ve ayarları → Jenerik ön sayfalar** bölümüne boş jenerik şablonunuzu (.docx) yükleyin. Sayı çıktısında kapak ve üst bilgideki E-ISSN, cilt, sayı, ay, yıl alanları ile içindekiler girdileri bu şablon doldurularak hazırlanır; künye tabloları şablondaki hâliyle korunur. Şablon yoksa kapak görseli ve künye metninden (`# BAŞLIK / TITLE | 2`, `#|` yan bölüm, `Ad ; Kurum`, `---` yeni sayfa) kapak, künye ve içindekiler oluşturulur.
-- **Sayı ve jenerik sekmesi:** Cilt, sayı, ay ve yıl girilir; kayıtlı makaleler sırayla eklenir. Makaleler ilk sayfa numarasından başlayarak kesintisiz numaralanır (LibreOffice varsa gerçek sayfa sayısına göre, yoksa makalelerin kayıtlı sayfa aralığına göre). Ayrı ayrı alınabilen çıktılar: Jenerik Word/PDF, makaleler Word/PDF (ZIP), tüm sayı tek PDF (yer imleriyle) ve tüm sayı Word (ZIP). `Sayfa aralıklarını hesapla` içindekiler sayfa numaralarını gösterir.
+- **Sayı ve jenerik sekmesi:** Cilt, sayı, ay ve yıl girilir; kayıtlı makaleler sırayla eklenir. Makaleler ilk makale sayfası numarasından başlayarak kesintisiz numaralanır; her makalenin uzunluğu kendi kayıtlı başlangıç–bitiş sayfasından alınır, içindekiler bu numaralarla dolar. Ayrı ayrı alınabilen Word çıktıları: jenerik, makaleler (ZIP) ve tüm sayı (ZIP). PDF gerekiyorsa Word dosyaları Word’den PDF olarak kaydedilir.
 
 ### GASTROIA hazır dergi ayarı
 

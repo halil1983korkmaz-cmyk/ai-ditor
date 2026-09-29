@@ -1,8 +1,8 @@
-"""Journal issue (sayı): front matter pages (cover, imprint, contents), pagination and assembly.
+"""Journal issue (sayı): front matter pages (cover, imprint, contents) and consecutive pagination.
 
 Front matter ("jenerik") comes from journal-level settings (imprint text, cover image, header
 line) plus issue data (volume, issue, month, year) and the saved articles chosen for the issue.
-Everything is produced as editable Word and, through LibreOffice, as PDF.
+Everything is produced as editable Word files.
 """
 import copy
 import io
@@ -16,7 +16,6 @@ from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls, qn
 from docx.shared import Cm, Pt, RGBColor
 
-import pdf_export
 from docx_export import (ALIGN, FONTS, _custom, _element, _paragraph, _picture, _run, _table, generate_docx_from_form)
 from journal_templates import normalize_settings
 
@@ -406,31 +405,20 @@ def issue_article_data(data, issue, start, end):
     return data
 
 
-def build_articles(items, issue, settings, assets, first_page, want_pdf):
-    """Render every article, numbering pages consecutively.
+def build_articles(items, issue, settings, assets, first_page):
+    """Render every article Word file, numbering pages consecutively.
 
-    items: [(name, form_data, figures)]. Returns [{'name','docx','pdf','start','end'}].
-    With PDF available the real page counts drive the numbering; otherwise saved end pages are used.
+    items: [(name, form_data, figures)]. An article spans its saved page range
+    (end - start + 1, at least one page); the next starts on the following page.
+    Returns [{'name','docx','start','end'}].
     """
     results, cursor = [], first_page
     for name, data, figures in items:
-        start = cursor
-        saved_end = str(data.get('cover', {}).get('end_page', '')).strip()
-        end = start
-        pdf = None
-        if want_pdf:
-            for _ in range(3):
-                docx = generate_docx_from_form(issue_article_data(data, issue, start, end), figures, settings, assets)
-                pdf = pdf_export.docx_to_pdf(docx)
-                pages = pdf_export.page_count(pdf)
-                if start + pages - 1 == end:
-                    break
-                end = start + pages - 1
-        else:
-            saved_start = str(data.get('cover', {}).get('start_page', '')).strip()
-            span = int(saved_end) - int(saved_start) + 1 if saved_end.isdigit() and saved_start.isdigit() else 1
-            end = start + max(span, 1) - 1
-            docx = generate_docx_from_form(issue_article_data(data, issue, start, end), figures, settings, assets)
-        results.append({'name': name, 'docx': docx, 'pdf': pdf, 'start': start, 'end': end})
+        cover = data.get('cover', {})
+        saved_start, saved_end = str(cover.get('start_page', '')).strip(), str(cover.get('end_page', '')).strip()
+        span = int(saved_end) - int(saved_start) + 1 if saved_start.isdigit() and saved_end.isdigit() else 1
+        start, end = cursor, cursor + max(span, 1) - 1
+        docx = generate_docx_from_form(issue_article_data(data, issue, start, end), figures, settings, assets)
+        results.append({'name': name, 'docx': docx, 'start': start, 'end': end})
         cursor = end + 1
     return results

@@ -23,7 +23,6 @@ from account_store import AccountStore, DuplicateUsername, RevisionConflict, che
 from journal_templates import TEMPLATES, default_settings, normalize_settings
 from citation_links import citation_report
 from apa_rules import check_article
-import pdf_export
 import issue_export
 from page_furniture import TOKENS, RUNNING_DEFAULTS
 from docx_export import generate_docx_from_form, DOCX_MIME
@@ -531,7 +530,7 @@ def validate_issue(data):
 
 @app.route('/api/issues')
 def list_issues():
-    return jsonify(ok=True, issues=account_store().issues(session['account_id']), pdf_available=pdf_export.pdf_available())
+    return jsonify(ok=True, issues=account_store().issues(session['account_id']))
 
 
 @app.route('/api/issues/<issue_id>', methods=['GET', 'PUT', 'DELETE'])
@@ -586,7 +585,7 @@ def issue_inputs(owner, issue_id):
     return issue['data'], settings, assets, items
 
 
-BUILD_KINDS = {'pages', 'frontmatter_docx', 'frontmatter_pdf', 'articles_docx', 'articles_pdf', 'issue_docx', 'issue_pdf'}
+BUILD_KINDS = {'pages', 'frontmatter_docx', 'articles_docx', 'issue_docx'}
 
 
 @app.route('/api/issues/<issue_id>/build', methods=['POST'])
@@ -595,29 +594,20 @@ def build_issue(issue_id):
     if kind not in BUILD_KINDS:
         raise ValueError('Bilinmeyen sayı çıktısı.')
     issue, settings, assets, items = issue_inputs(session['account_id'], issue_id)
-    needs_pdf = kind.endswith('pdf') or kind == 'pages'
-    if needs_pdf and not pdf_export.pdf_available():
-        raise pdf_export.PdfUnavailable('PDF çıktısı için bilgisayarda LibreOffice kurulu olmalıdır (libreoffice.org). Word çıktısı LibreOffice olmadan da alınabilir.')
     if kind.startswith('articles') and not items:
         raise ValueError('Önce sayıya en az bir makale ekleyin.')
     try:
-        built = issue_export.build_articles(items, issue, settings, assets, int(issue.get('first_page', '1')),
-                                            want_pdf=pdf_export.pdf_available())
+        built = issue_export.build_articles(items, issue, settings, assets, int(issue.get('first_page', '1')))
         ranges = [{'title': name, 'start': b['start'], 'end': b['end']} for (name, _, _), b in zip(items, built)]
         label = _slug(' '.join(filter(None, ['cilt' + issue.get('volume', ''), 'sayi' + issue.get('issue', ''), issue.get('year', '')]))) or 'sayi'
         if kind == 'pages':
             return jsonify(ok=True, ranges=ranges)
         frontmatter = None
-        if kind.startswith(('frontmatter', 'issue')):
+        if kind in ('frontmatter_docx', 'issue_docx'):
             entries = issue_export.toc_entries([data for _, data, _ in items], [(b['start'], b['end']) for b in built])
             frontmatter = issue_export.frontmatter_docx(issue, settings, assets, entries)
         if kind == 'frontmatter_docx':
             blob, mime, name = frontmatter, DOCX_MIME, f'{label}-jenerik.docx'
-        elif kind == 'frontmatter_pdf':
-            blob, mime, name = pdf_export.docx_to_pdf(frontmatter), PDF_MIME, f'{label}-jenerik.pdf'
-        elif kind == 'issue_pdf':
-            parts = [('Jenerik', pdf_export.docx_to_pdf(frontmatter))] + [(item[0], b['pdf']) for item, b in zip(items, built)]
-            blob, mime, name = pdf_export.merge_pdfs(parts), PDF_MIME, f'{label}.pdf'
         else:
             buffer = io.BytesIO()
             with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
@@ -625,11 +615,8 @@ def build_issue(issue_id):
                     archive.writestr('00-jenerik.docx', frontmatter)
                 for number, ((title, _, _), b) in enumerate(zip(items, built), 1):
                     stem = f'{number:02d}-{_slug(title)}'
-                    if kind.endswith('docx'):
-                        archive.writestr(stem + '.docx', b['docx'])
-                    else:
-                        archive.writestr(stem + '.pdf', b['pdf'])
-            blob, mime, name = buffer.getvalue(), ZIP_MIME, f'{label}-{"pdf" if kind.endswith("pdf") else "docx"}.zip'
+                    archive.writestr(stem + '.docx', b['docx'])
+            blob, mime, name = buffer.getvalue(), ZIP_MIME, f'{label}-docx.zip'
         return jsonify(ok=True, key=store_output(blob, mime, name), filename=name, ranges=ranges)
     except (ValueError, HTTPException):
         raise
@@ -766,7 +753,6 @@ def store_output(blob, mime, name):
     return key
 
 
-PDF_MIME = 'application/pdf'
 ZIP_MIME = 'application/zip'
 
 
@@ -777,20 +763,6 @@ def download_file(key):
     if blob is None or meta is None:
         return jsonify(ok=False, error='Dosya bulunamadı; çıktıyı bu dergi hesabında yeniden oluşturun.'), 404
     return send_file(io.BytesIO(blob), mimetype=meta[0], as_attachment=True, download_name=meta[1])
-
-
-@app.route('/process_pdf', methods=['POST'])
-def process_pdf():
-    data, figures, settings, assets = generation_inputs()
-    try:
-        pdf = pdf_export.docx_to_pdf(generate_docx_from_form(data, figures, settings, assets))
-        return jsonify(ok=True, key=store_output(pdf, PDF_MIME, 'aiditor_article.pdf'),
-                       citations=citation_report(data, settings['link_citations']), apa=check_article(data, settings))
-    except (ValueError, HTTPException):
-        raise
-    except Exception:
-        app.logger.exception('PDF generation failed')
-        return jsonify(ok=False, error='PDF çıktısı oluşturulamadı. Makale ve görsel alanlarını kontrol edin.'), 500
 
 
 @app.route('/download/<key>')

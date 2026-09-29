@@ -1,4 +1,4 @@
-/* Save an authenticated output (PDF, Word, ZIP) from inside the signed-in page. */
+/* Save an authenticated output (Word, ZIP) from inside the signed-in page. */
 window.saveOutputFile = async function (url, filename, mime, statusElement) {
   const say = text => { if (statusElement) statusElement.textContent = text; };
   try {
@@ -11,8 +11,7 @@ window.saveOutputFile = async function (url, filename, mime, statusElement) {
     }
     const blob = await response.blob();
     const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
-    const isPdf = head.join(',') === '37,80,68,70', isZip = head.join(',') === '80,75,3,4';
-    if (blob.size < 22 || !(mime === 'application/pdf' ? isPdf : isZip)) throw new Error('Dosya eksik veya geçersiz. Çıktıyı yeniden oluşturun.');
+    if (blob.size < 22 || head.join(',') !== '80,75,3,4') throw new Error('Dosya eksik veya geçersiz. Çıktıyı yeniden oluşturun.');
     if (window.pywebview) {
       if (typeof window.pywebview.api?.save_output !== 'function') throw new Error('Kaydetme bağlantısı hazır değil. Uygulamayı yeniden açın.');
       const encoded = await new Promise((resolve, reject) => {
