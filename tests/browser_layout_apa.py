@@ -63,6 +63,40 @@ def run():
             page.locator('#js-layout_mode').select_option('template')
             assert page.locator('#layout-custom-fields').evaluate('el => el.disabled')
 
+            # Front matter settings arrive with the preset (template, cover and banner assets included).
+            page.locator('#journal-tab').click()
+            expect(page.locator('#js-logo_mode')).to_have_value('banner')
+            expect(page.locator('#jenerik-label')).to_have_text('gastroia-jenerik-sablonu.docx')
+            expect(page.locator('#cover-label')).to_have_text('gastroia-cover.png')
+            assert '"jenerik"' in json.dumps(api(page, '/api/journal')['assets']) or 'jenerik' in api(page, '/api/journal')['assets']
+
+            # Issue workspace: create, edit, autosave, article selection and outputs panel.
+            article = {'format': 'aiditor-project', 'version': 1, 'figures': {}, 'data': {'cover': {'tr_title': 'Sayı makalesi'}, 'abstract': {}, 'extra': {}, 'authors': [], 'sections': [], 'figtables': [], 'references': ''}}
+            article_id = page.evaluate('''async (project) => { const id = crypto.randomUUID(); const r = await aiditorFetch('/api/articles/' + id, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({project, base_revision: 0})}); if (!r.ok) throw new Error('article'); return id; }''', article)
+            page.locator('#issues-tab').click()
+            page.locator('#issue-new').click()
+            page.wait_for_selector('#issue-form:not([hidden])')
+            page.locator('#issue-volume').fill('9')
+            page.locator('#issue-issue').fill('2')
+            page.locator('#issue-year').fill('2025')
+            page.locator('#issue-articles input[type=checkbox]').first.check()
+            for _ in range(50):
+                listing = api(page, '/api/issues')
+                if listing['issues'][0]['title'] == 'Cilt 9 Sayı 2 2025' and api(page, '/api/issues/' + listing['issues'][0]['id'])['issue']['data']['articles']:
+                    break
+                page.wait_for_timeout(200)
+            assert listing['issues'][0]['title'] == 'Cilt 9 Sayı 2 2025', listing
+            detail = api(page, '/api/issues/' + listing['issues'][0]['id'])['issue']['data']
+            assert detail['articles'] == [{'id': article_id}] and detail['year'] == '2025', detail
+            expect(page.locator('#issue-outputs')).to_be_visible()
+            page.locator('#issue-build-status').scroll_into_view_if_needed()
+            with page.expect_download() as download:
+                page.locator('[data-issue-build="frontmatter_docx"]').click()
+            assert download.value.suggested_filename.endswith('-jenerik.docx'), download.value.suggested_filename
+            page.locator('#issues-pane').screenshot(path=str(QA / 'issues.png'))
+            page.locator('#articles-tab').click()
+            expect(page.locator('#btn-pdf')).to_be_visible()
+
             # The APA report is built with text nodes only.
             page.evaluate('''() => renderApaReport({enabled:true,warnings:[{code:'x',message:'Mesaj',count:3,examples:['<img src=x onerror=alert(1)>']}]})''')
             text = page.locator('#apa-result').text_content()

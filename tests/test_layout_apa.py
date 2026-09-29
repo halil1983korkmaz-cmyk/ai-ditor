@@ -189,12 +189,14 @@ class PresetTests(unittest.TestCase):
         self.assertEqual((settings['body_space_before_pt'], settings['body_space_after_pt'], settings['footnote_size_pt']), (12, 12, 10))
         self.assertEqual((settings['apa_and'], settings['apa_et_al']), ('&', 'auto'))
         self.assertEqual(settings['issn_online'], '2602-4144')
-        self.assertEqual(set(application.validate_assets(preset['assets'])), {'logo', 'license'})
+        self.assertEqual(set(application.validate_assets(preset['assets'])), {'logo', 'license', 'cover', 'jenerik'})
 
     def test_preset_builds_a_word_document_and_matches_generator(self):
         preset = json.loads(self.path.read_text(encoding='utf-8'))
         assets = {}
         for key, asset in application.validate_assets(preset['assets']).items():
+            if key == 'jenerik':
+                continue
             name, blob, _ = application.decode_asset(asset)
             assets[key] = (name, blob)
         document = Document(io.BytesIO(generate_docx_from_form(article(), {}, preset['settings'], assets)))

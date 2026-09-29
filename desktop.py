@@ -24,6 +24,46 @@ class ArticleDownloads:
     def save_article_docx(self, encoded):
         return self._save_package(encoded, 'docx')
 
+    def save_output(self, filename, encoded):
+        """Save a PDF, Word or ZIP output chosen by name (issue exports, article PDF)."""
+        if not self._lock.acquire(blocking=False):
+            return {'ok': False, 'error': 'Açık olan kaydetme penceresini tamamlayın.'}
+        temporary = None
+        try:
+            suffix = Path(str(filename)).suffix.lower()
+            if suffix not in {'.pdf', '.docx', '.zip'} or len(str(filename)) > 120 or '/' in str(filename) or '\\' in str(filename):
+                raise ValueError('Dosya adı geçersiz.')
+            if not isinstance(encoded, str) or len(encoded) > 400 * 1024 * 1024:
+                raise ValueError('Dosya çok büyük veya geçersiz.')
+            try:
+                blob = base64.b64decode(encoded, validate=True)
+            except (ValueError, binascii.Error) as exc:
+                raise ValueError('Dosya verisi çözülemedi. Çıktıyı yeniden oluşturun.') from exc
+            if (suffix == '.pdf' and not blob.startswith(b'%PDF')) or (suffix != '.pdf' and not blob.startswith(b'PK\x03\x04')):
+                raise ValueError('Geçerli bir çıktı dosyası alınamadı. Çıktıyı yeniden oluşturun.')
+            import webview
+            selected = self._window.create_file_dialog(webview.FileDialog.SAVE, save_filename=str(filename),
+                                                       file_types=((suffix[1:].upper() + ' dosyası (*' + suffix + ')'),))
+            if not selected:
+                return {'ok': True, 'cancelled': True}
+            target = Path(selected if isinstance(selected, str) else selected[0])
+            with tempfile.NamedTemporaryFile(dir=target.parent, prefix='.aiditor-', delete=False) as stream:
+                temporary = Path(stream.name)
+                stream.write(blob)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, target)
+            temporary = None
+            return {'ok': True, 'cancelled': False}
+        except ValueError as error:
+            return {'ok': False, 'error': str(error)}
+        except OSError:
+            return {'ok': False, 'error': 'Dosya kaydedilemedi. Klasör izinlerini ve boş disk alanını kontrol edin.'}
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+            self._lock.release()
+
     def _save_package(self, encoded, kind):
         if not self._lock.acquire(blocking=False):
             return {'ok': False, 'error': 'Açık olan kaydetme penceresini tamamlayın.'}

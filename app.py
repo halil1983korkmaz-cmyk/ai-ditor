@@ -23,6 +23,8 @@ from account_store import AccountStore, DuplicateUsername, RevisionConflict, che
 from journal_templates import TEMPLATES, default_settings, normalize_settings
 from citation_links import citation_report
 from apa_rules import check_article
+import pdf_export
+import issue_export
 from page_furniture import TOKENS, RUNNING_DEFAULTS
 from docx_export import generate_docx_from_form, DOCX_MIME
 from formatter import generate_latex_from_form, extract_form_data_from_docx, _normalize_table_model
@@ -42,6 +44,8 @@ app.secret_key = AccountStore().session_secret()
 _zip_store = {}
 _docx_export_store = {}
 _docx_import_store = {}
+_file_store = {}
+_file_meta = {}
 _cache_lock = threading.RLock()
 
 
@@ -240,7 +244,7 @@ def decode_asset(value, *, allow_pdf=True, max_bytes=8 * 1024 * 1024):
     name, encoded = value.get('name'), value.get('data')
     if not isinstance(encoded, str) or len(encoded) > (max_bytes * 4 // 3 + 1024):
         raise ValueError('Görsel verisi boyut sınırını aşıyor.')
-    match = re.fullmatch(r'data:([\w/+.-]+);base64,([A-Za-z0-9+/=]+)', encoded)
+    match = re.fullmatch(r'data:([\w/+.-]*);base64,([A-Za-z0-9+/=]+)', encoded)
     if not match:
         raise ValueError('Görsel base64 veri biçiminde olmalıdır.')
     try:
@@ -254,13 +258,34 @@ def decode_asset(value, *, allow_pdf=True, max_bytes=8 * 1024 * 1024):
     return name, blob, ext
 
 
+def decode_template(value, max_bytes=8 * 1024 * 1024):
+    """A blank Word template uploaded by the journal (front matter / jenerik)."""
+    if not isinstance(value, dict):
+        raise ValueError('Şablon verisi geçersiz.')
+    name, encoded = value.get('name'), value.get('data')
+    if not isinstance(name, str) or not name.lower().endswith('.docx') or '/' in name or '\\' in name or len(name) > 200:
+        raise ValueError('Jenerik şablonu .docx dosyası olmalıdır.')
+    match = re.fullmatch(r'data:([\w/+.-]*);base64,([A-Za-z0-9+/=]+)', encoded) if isinstance(encoded, str) and len(encoded) <= max_bytes * 4 // 3 + 1024 else None
+    if not match:
+        raise ValueError('Jenerik şablonu 8 MB sınırını aşıyor veya geçersiz.')
+    try:
+        blob = base64.b64decode(match.group(2), validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise ValueError('Jenerik şablonu çözülemedi.') from exc
+    read_docx(type('Upload', (), {'filename': name, 'read': lambda self: blob})())
+    return name, blob
+
+
 def validate_assets(assets):
-    if not isinstance(assets, dict) or any(key not in {'logo', 'license'} for key in assets):
+    if not isinstance(assets, dict) or any(key not in {'logo', 'license', 'cover', 'jenerik'} for key in assets):
         raise ValueError('Dergi görselleri geçersiz.')
     result = {}
     for key, asset in assets.items():
         if asset is None:
             result[key] = None
+        elif key == 'jenerik':
+            name, blob = decode_template(asset)
+            result[key] = {'name': name, 'data': 'data:' + DOCX_MIME + ';base64,' + base64.b64encode(blob).decode('ascii')}
         else:
             name, blob, ext = decode_asset(asset)
             mime = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'pdf': 'application/pdf'}[ext]
@@ -335,7 +360,7 @@ def local_requests_only():
         return jsonify(ok=False, error='Devam etmek için dergi hesabına giriş yapın.', code='login_required'), 401
     # Resource tags/download links cannot send custom headers; their cache owner
     # still has to match the authenticated account before any bytes are returned.
-    resource = request.path.startswith(('/download/', '/download_docx/')) or re.fullmatch(r'/import_docx/[^/]+/image/\d+', request.path)
+    resource = request.path.startswith(('/download/', '/download_docx/', '/download_file/')) or re.fullmatch(r'/import_docx/[^/]+/image/\d+', request.path)
     if not resource and request.headers.get('X-Aiditor-Account') != user['id']:
         return jsonify(ok=False, error='Bu penceredeki dergi hesabı değişti. Sayfayı yenileyerek doğru hesapla devam edin.', code='account_changed'), 409
 
@@ -476,6 +501,143 @@ def apa_check():
     return jsonify(ok=True, apa=check_article(data, settings))
 
 
+def validate_issue(data):
+    if not isinstance(data, dict):
+        raise ValueError('Sayı bilgisi bir nesne olmalıdır.')
+    clean = {}
+    for key in ('volume', 'issue', 'month_tr', 'month_en', 'year'):
+        value = data.get(key, '')
+        if not isinstance(value, str) or len(value) > 40 or any(ord(c) < 32 for c in value):
+            raise ValueError('Sayı bilgileri en çok 40 karakterlik metin olmalıdır.')
+        clean[key] = value.strip()
+    first = str(data.get('first_page', '1')).strip() or '1'
+    if not re.fullmatch(r'[0-9]{1,5}', first) or int(first) < 1:
+        raise ValueError('Sayının ilk makale sayfası pozitif bir tam sayı olmalıdır.')
+    clean['first_page'] = str(int(first))
+    articles = data.get('articles', [])
+    if not isinstance(articles, list) or len(articles) > 200:
+        raise ValueError('Sayıdaki makale listesi geçersiz.')
+    seen = set()
+    clean['articles'] = []
+    for item in articles:
+        article_id = item.get('id') if isinstance(item, dict) else None
+        check_id(article_id)
+        if article_id in seen:
+            raise ValueError('Bir makale sayıya yalnızca bir kez eklenebilir.')
+        seen.add(article_id)
+        clean['articles'].append({'id': article_id})
+    return clean
+
+
+@app.route('/api/issues')
+def list_issues():
+    return jsonify(ok=True, issues=account_store().issues(session['account_id']), pdf_available=pdf_export.pdf_available())
+
+
+@app.route('/api/issues/<issue_id>', methods=['GET', 'PUT', 'DELETE'])
+def saved_issue(issue_id):
+    store, owner = account_store(), session['account_id']
+    if request.method == 'GET':
+        issue = store.issue(owner, issue_id)
+        if issue is None:
+            return jsonify(ok=False, error='Kayıtlı sayı bulunamadı.'), 404
+        return jsonify(ok=True, issue=issue)
+    payload = json_object()
+    if request.method == 'DELETE':
+        if not store.delete_issue(owner, issue_id, payload.get('base_revision')):
+            return jsonify(ok=False, error='Kayıtlı sayı bulunamadı.'), 404
+        return jsonify(ok=True)
+    return jsonify(ok=True, issue=store.save_issue(owner, issue_id, validate_issue(payload.get('data')), payload.get('base_revision')))
+
+
+def _slug(text):
+    import unicodedata
+    text = text.translate(str.maketrans('çğıöşüÇĞİÖŞÜ', 'cgiosuCGIOSU'))
+    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+    return re.sub(r'[^A-Za-z0-9]+', '-', text).strip('-').lower()[:50] or 'makale'
+
+
+def issue_inputs(owner, issue_id):
+    store = account_store()
+    issue = store.issue(owner, issue_id)
+    if issue is None:
+        raise ValueError('Kayıtlı sayı bulunamadı.')
+    saved = store.journal(owner)
+    settings = normalize_settings(saved['settings'])
+    assets = {}
+    for key, asset in saved['assets'].items():
+        if key == 'jenerik':
+            assets[key] = decode_template(asset)
+        else:
+            name, blob, _ = decode_asset(asset)
+            assets[key] = (name, blob)
+    items = []
+    for entry in issue['data'].get('articles', []):
+        article = store.article(owner, entry['id'])
+        if article is None:
+            raise ValueError('Sayıya eklenmiş bir makale artık kayıtlı değil. Makale listesini güncelleyin.')
+        data = article['project']['data']
+        validate_form(data, draft=True)
+        figures = {}
+        for key, asset in article['project'].get('figures', {}).items():
+            name, blob, ext = decode_asset(asset, allow_pdf=True, max_bytes=16 * 1024 * 1024)
+            figures[key] = (f'fig_{key}.{ext}', blob)
+        items.append((article['title'], data, figures))
+    return issue['data'], settings, assets, items
+
+
+BUILD_KINDS = {'pages', 'frontmatter_docx', 'frontmatter_pdf', 'articles_docx', 'articles_pdf', 'issue_docx', 'issue_pdf'}
+
+
+@app.route('/api/issues/<issue_id>/build', methods=['POST'])
+def build_issue(issue_id):
+    kind = json_object().get('kind')
+    if kind not in BUILD_KINDS:
+        raise ValueError('Bilinmeyen sayı çıktısı.')
+    issue, settings, assets, items = issue_inputs(session['account_id'], issue_id)
+    needs_pdf = kind.endswith('pdf') or kind == 'pages'
+    if needs_pdf and not pdf_export.pdf_available():
+        raise pdf_export.PdfUnavailable('PDF çıktısı için bilgisayarda LibreOffice kurulu olmalıdır (libreoffice.org). Word çıktısı LibreOffice olmadan da alınabilir.')
+    if kind.startswith('articles') and not items:
+        raise ValueError('Önce sayıya en az bir makale ekleyin.')
+    try:
+        built = issue_export.build_articles(items, issue, settings, assets, int(issue.get('first_page', '1')),
+                                            want_pdf=pdf_export.pdf_available())
+        ranges = [{'title': name, 'start': b['start'], 'end': b['end']} for (name, _, _), b in zip(items, built)]
+        label = _slug(' '.join(filter(None, ['cilt' + issue.get('volume', ''), 'sayi' + issue.get('issue', ''), issue.get('year', '')]))) or 'sayi'
+        if kind == 'pages':
+            return jsonify(ok=True, ranges=ranges)
+        frontmatter = None
+        if kind.startswith(('frontmatter', 'issue')):
+            entries = issue_export.toc_entries([data for _, data, _ in items], [(b['start'], b['end']) for b in built])
+            frontmatter = issue_export.frontmatter_docx(issue, settings, assets, entries)
+        if kind == 'frontmatter_docx':
+            blob, mime, name = frontmatter, DOCX_MIME, f'{label}-jenerik.docx'
+        elif kind == 'frontmatter_pdf':
+            blob, mime, name = pdf_export.docx_to_pdf(frontmatter), PDF_MIME, f'{label}-jenerik.pdf'
+        elif kind == 'issue_pdf':
+            parts = [('Jenerik', pdf_export.docx_to_pdf(frontmatter))] + [(item[0], b['pdf']) for item, b in zip(items, built)]
+            blob, mime, name = pdf_export.merge_pdfs(parts), PDF_MIME, f'{label}.pdf'
+        else:
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
+                if kind == 'issue_docx':
+                    archive.writestr('00-jenerik.docx', frontmatter)
+                for number, ((title, _, _), b) in enumerate(zip(items, built), 1):
+                    stem = f'{number:02d}-{_slug(title)}'
+                    if kind.endswith('docx'):
+                        archive.writestr(stem + '.docx', b['docx'])
+                    else:
+                        archive.writestr(stem + '.pdf', b['pdf'])
+            blob, mime, name = buffer.getvalue(), ZIP_MIME, f'{label}-{"pdf" if kind.endswith("pdf") else "docx"}.zip'
+        return jsonify(ok=True, key=store_output(blob, mime, name), filename=name, ranges=ranges)
+    except (ValueError, HTTPException):
+        raise
+    except Exception:
+        app.logger.exception('Issue generation failed')
+        return jsonify(ok=False, error='Sayı çıktısı oluşturulamadı. Makale ve dergi ayarlarını kontrol edin.'), 500
+
+
 @app.route('/api/articles')
 def list_articles():
     return jsonify(ok=True, articles=account_store().articles(session['account_id']))
@@ -592,6 +754,43 @@ def download_docx(key):
     if blob is None:
         return jsonify(ok=False, error='Word dosyası bulunamadı; çıktıyı bu dergi hesabında yeniden oluşturun.'), 404
     return send_file(io.BytesIO(blob), mimetype=DOCX_MIME, as_attachment=True, download_name='aiditor_article.docx')
+
+
+def store_output(blob, mime, name):
+    key = str(uuid.uuid4())
+    cache_put(_file_store, key, session['account_id'], blob)
+    with _cache_lock:
+        _file_meta[key] = (mime, name)
+        for stale in [k for k in _file_meta if k not in _file_store]:
+            _file_meta.pop(stale, None)
+    return key
+
+
+PDF_MIME = 'application/pdf'
+ZIP_MIME = 'application/zip'
+
+
+@app.route('/download_file/<key>')
+def download_file(key):
+    blob = cache_get(_file_store, key)
+    meta = _file_meta.get(key)
+    if blob is None or meta is None:
+        return jsonify(ok=False, error='Dosya bulunamadı; çıktıyı bu dergi hesabında yeniden oluşturun.'), 404
+    return send_file(io.BytesIO(blob), mimetype=meta[0], as_attachment=True, download_name=meta[1])
+
+
+@app.route('/process_pdf', methods=['POST'])
+def process_pdf():
+    data, figures, settings, assets = generation_inputs()
+    try:
+        pdf = pdf_export.docx_to_pdf(generate_docx_from_form(data, figures, settings, assets))
+        return jsonify(ok=True, key=store_output(pdf, PDF_MIME, 'aiditor_article.pdf'),
+                       citations=citation_report(data, settings['link_citations']), apa=check_article(data, settings))
+    except (ValueError, HTTPException):
+        raise
+    except Exception:
+        app.logger.exception('PDF generation failed')
+        return jsonify(ok=False, error='PDF çıktısı oluşturulamadı. Makale ve görsel alanlarını kontrol edin.'), 500
 
 
 @app.route('/download/<key>')

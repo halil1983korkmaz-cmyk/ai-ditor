@@ -78,6 +78,10 @@ class AccountStore:
                     owner TEXT NOT NULL REFERENCES accounts(id), id TEXT NOT NULL, title TEXT NOT NULL,
                     authors TEXT NOT NULL, updated_at TEXT NOT NULL, revision INTEGER NOT NULL,
                     project TEXT NOT NULL, PRIMARY KEY(owner,id));
+                CREATE TABLE IF NOT EXISTS issues (
+                    owner TEXT NOT NULL REFERENCES accounts(id), id TEXT NOT NULL, title TEXT NOT NULL,
+                    updated_at TEXT NOT NULL, revision INTEGER NOT NULL,
+                    data TEXT NOT NULL, PRIMARY KEY(owner,id));
             ''')
             db.commit()
             return db
@@ -193,4 +197,53 @@ class AccountStore:
             if row['revision'] != base_revision:
                 raise RevisionConflict
             db.execute('DELETE FROM articles WHERE owner=? AND id=?', (owner, article_id))
+            return True
+
+    def issues(self, owner):
+        with closing(self._connect()) as db:
+            return [dict(row) for row in db.execute('SELECT id,title,updated_at,revision FROM issues WHERE owner=? ORDER BY updated_at DESC,id', (owner,))]
+
+    def issue(self, owner, issue_id):
+        check_id(issue_id)
+        with closing(self._connect()) as db:
+            row = db.execute('SELECT id,title,updated_at,revision,data FROM issues WHERE owner=? AND id=?', (owner, issue_id)).fetchone()
+            if row is None:
+                return None
+            result = dict(row)
+            result['data'] = json.loads(result['data'])
+            return result
+
+    def save_issue(self, owner, issue_id, data, base_revision):
+        check_id(issue_id)
+        _revision(base_revision)
+        encoded = _encode(data)
+        title = ' '.join(part for part in (
+            'Cilt ' + str(data.get('volume', '')).strip() if str(data.get('volume', '')).strip() else '',
+            'Sayı ' + str(data.get('issue', '')).strip() if str(data.get('issue', '')).strip() else '',
+            str(data.get('year', '')).strip()) if part) or 'Adsız sayı'
+        with closing(self._connect()) as db, db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT revision,data,updated_at FROM issues WHERE owner=? AND id=?', (owner, issue_id)).fetchone()
+            revision = row['revision'] if row else 0
+            if row and row['data'] == encoded:
+                return dict(id=issue_id, title=title, updated_at=row['updated_at'], revision=revision)
+            if revision != base_revision:
+                raise RevisionConflict
+            now = _now()
+            db.execute('''INSERT INTO issues VALUES (?,?,?,?,?,?) ON CONFLICT(owner,id) DO UPDATE SET
+                title=excluded.title,updated_at=excluded.updated_at,revision=excluded.revision,data=excluded.data''',
+                       (owner, issue_id, title, now, revision + 1, encoded))
+            return dict(id=issue_id, title=title, updated_at=now, revision=revision + 1)
+
+    def delete_issue(self, owner, issue_id, base_revision):
+        check_id(issue_id)
+        _revision(base_revision)
+        with closing(self._connect()) as db, db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT revision FROM issues WHERE owner=? AND id=?', (owner, issue_id)).fetchone()
+            if row is None:
+                return False
+            if row['revision'] != base_revision:
+                raise RevisionConflict
+            db.execute('DELETE FROM issues WHERE owner=? AND id=?', (owner, issue_id))
             return True

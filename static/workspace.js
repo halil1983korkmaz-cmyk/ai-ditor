@@ -38,10 +38,10 @@ window.journalWorkspace = (() => {
     header_layout:'js-header-layout', footer_layout:'js-footer-layout', footer_text:'js-footer-text', first_page_fit:'js-first-page-fit',
   };
   document.querySelectorAll('[data-journal-setting]').forEach(element => { fields[element.dataset.journalSetting] = element.id; });
-  let settings = {}, assets = {logo:null,license:null}, templates = [], revision = 0;
+  let settings = {}, assets = {logo:null,license:null,cover:null,jenerik:null}, templates = [], revision = 0;
   let ready = false, dirty = false, sequence = 0, inFlight = null, timer = null, conflict = false, authMode = 'login';
   let attempt = null, replacementAttempt = null, replacing = false, loading = false;
-  const assetJobs = new Set(), assetGenerations = {logo:0,license:0}, assetSlotJobs = {};
+  const assetJobs = new Set(), assetGenerations = {logo:0,license:0,cover:0,jenerik:0}, assetSlotJobs = {};
   const localTemplates = [
     {id:'classic', name:'Klasik', description:'Çift dilli kimlik, çizgili üst bilgi ve geleneksel akademik düzen.'},
     {id:'contemporary', name:'Çağdaş', description:'Belirgin renk bandı ve güçlü bir başlık hiyerarşisi.'},
@@ -78,8 +78,8 @@ window.journalWorkspace = (() => {
     updateAssets(); renderTemplates(); updatePreview();
   }
   function updateAssets() {
-    for (const [key,id] of [['logo','logo'],['license','ccby']]) {
-      byId(id+'-label').textContent = assets[key]?.name || (key==='logo' ? 'Logo eklenmedi' : 'Lisans görseli eklenmedi');
+    for (const [key,id] of [['logo','logo'],['license','ccby'],['cover','cover'],['jenerik','jenerik']]) {
+      byId(id+'-label').textContent = assets[key]?.name || (key==='logo' ? 'Logo eklenmedi' : key==='cover' ? 'Kapak görseli eklenmedi' : key==='jenerik' ? 'Jenerik şablonu eklenmedi' : 'Lisans görseli eklenmedi');
       byId('remove-'+key).hidden = !assets[key];
     }
   }
@@ -152,7 +152,7 @@ window.journalWorkspace = (() => {
     delete assetSlotJobs[key];
   }
   function invalidateAssetReads() {
-    invalidateAssetRead('logo');invalidateAssetRead('license');
+    invalidateAssetRead('logo');invalidateAssetRead('license');invalidateAssetRead('cover');invalidateAssetRead('jenerik');
   }
   async function load() {
     if(loading || replacing || replacementAttempt)throw new Error('Devam eden dergi ayarları işlemini tamamlayın; gerekiyorsa içe aktarma kaydını yeniden deneyin.');
@@ -163,8 +163,8 @@ window.journalWorkspace = (() => {
       // Settle any already dispatched write before replacing the local revision.
       if(inFlight)await inFlight;
       const result=await api('/api/journal');
-      assets={logo:null,license:null,...result.assets};revision=result.revision;dirty=false;conflict=false;attempt=null;
-      byId('logo-inp').value='';byId('ccby-inp').value='';
+      assets={logo:null,license:null,cover:null,jenerik:null,...result.assets};revision=result.revision;dirty=false;conflict=false;attempt=null;
+      byId('logo-inp').value='';byId('ccby-inp').value='';byId('cover-inp').value='';byId('jenerik-inp').value='';
       apply(result.settings);status('Dergi ayarları kayıtlı');
     } finally {loading=false;byId('journal-form').inert=accountBlocked || !!replacementAttempt;if(ready && dirty && !conflict && !accountBlocked && !timer)timer=setTimeout(()=>flush(),700);}
   }
@@ -202,7 +202,7 @@ window.journalWorkspace = (() => {
     try{return await inFlight;}finally{inFlight=null;}
   }
   function switchPane(name){
-    for(const pane of ['journal','articles']){byId(pane+'-pane').hidden=pane!==name;byId(pane+'-tab').setAttribute('aria-selected',String(pane===name));}
+    for(const pane of ['journal','articles','issues']){byId(pane+'-pane').hidden=pane!==name;byId(pane+'-tab').setAttribute('aria-selected',String(pane===name));}
   }
   function downloadJSON(data,name){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   async function exportPreset(){await Promise.all([...assetJobs]);downloadJSON({format:'aiditor-journal-preset',version:1,settings:collect(),assets},'aiditor-dergi-ayarlari.json');showToast('Dergi ayarları ve logolar JSON yedeğine eklendi.');}
@@ -229,9 +229,9 @@ window.journalWorkspace = (() => {
     const pending=replacementAttempt;
     try {
       const result=await api('/api/journal',{method:'PUT',headers:{'Content-Type':'application/json'},body:pending.body});
-      revision=result.revision;assets={logo:null,license:null,...(result.assets || pending.assets)};
+      revision=result.revision;assets={logo:null,license:null,cover:null,jenerik:null,...(result.assets || pending.assets)};
       apply(result.settings || pending.settings);dirty=false;conflict=false;attempt=null;replacementAttempt=null;
-      byId('logo-inp').value='';byId('ccby-inp').value='';status('Dergi ayarları içe aktarıldı ve kaydedildi');return true;
+      byId('logo-inp').value='';byId('ccby-inp').value='';byId('cover-inp').value='';byId('jenerik-inp').value='';status('Dergi ayarları içe aktarıldı ve kaydedildi');return true;
     } catch(error) {
       // A transport failure or 5xx can follow a successful disk commit. Keep the
       // exact request for idempotent replay; fields remain locked until its ack.
@@ -255,7 +255,7 @@ window.journalWorkspace = (() => {
     try {
       // Invalid imports never replace current fields or invalidate their image reads.
       const validated=await api('/validate_journal',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({settings:incomingSettings,assets:{logo:null,license:null,...incomingAssets}})});
+        body:JSON.stringify({settings:incomingSettings,assets:{logo:null,license:null,cover:null,jenerik:null,...incomingAssets}})});
       if(!await flush(true))throw new Error('Mevcut dergi ayarları kaydedilemedi; içe aktarma uygulanmadı.');
       invalidateAssetReads();
       replacementAttempt={settings:validated.settings,assets:validated.assets,
@@ -269,11 +269,11 @@ window.journalWorkspace = (() => {
   function readAsset(key,input){
     invalidateAssetRead(key);
     const generation=assetGenerations[key],file=input.files?.[0];if(!file)return;
-    byId((key==='logo'?'logo':'ccby')+'-label').textContent=file.name+' · okunuyor…';
+    byId(({logo:'logo',license:'ccby',cover:'cover',jenerik:'jenerik'})[key]+'-label').textContent=file.name+' · okunuyor…';
     byId('remove-'+key).hidden=false;
     const job=(async()=>{
       try {
-        if(!/\.(png|jpe?g|pdf)$/i.test(file.name))throw new Error('PNG, JPG veya PDF dosyası seçin.');
+        if(!(key==='jenerik' ? /\.docx$/i : /\.(png|jpe?g|pdf)$/i).test(file.name))throw new Error(key==='jenerik' ? 'Word (.docx) dosyası seçin.' : 'PNG, JPG veya PDF dosyası seçin.');
         if(file.size>8*1024*1024)throw new Error('Görsel en fazla 8 MB olabilir.');
         const data=await fileDataURL(file);
         if(generation!==assetGenerations[key])return;
@@ -319,12 +319,12 @@ window.journalWorkspace = (() => {
     byId('login-tab').addEventListener('click',()=>authModeChanged('login'));byId('register-tab').addEventListener('click',()=>authModeChanged('register'));
     byId('auth-form').addEventListener('submit',async event=>{event.preventDefault();byId('auth-submit').disabled=true;byId('auth-status').textContent='';try{const response=await fetch('/api/auth/'+authMode,{method:'POST',headers:{'Content-Type':'application/json','X-Aiditor-Request':'1'},body:JSON.stringify({username:byId('auth-username').value,password:byId('auth-password').value,display_name:byId('auth-display-name').value})});const result=await response.json();if(!response.ok || !result.ok)throw new Error(result.error || 'Hesap işlemi tamamlanamadı.');byId('auth-password').value='';await enter(result.user, authMode==='register');}catch(error){byId('auth-status').textContent=error.message;}finally{byId('auth-submit').disabled=false;}});
     byId('logout-button').addEventListener('click',async()=>{try{if(!await prepareToClose())throw new Error('Kayıt tamamlanamadı. Çıkıştan önce JSON yedeği alın veya kayıt hatasını giderin.');await api('/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});location.reload();}catch(error){showToast(error.message);}});
-    ['journal','articles'].forEach(name=>byId(name+'-tab').addEventListener('click',()=>switchPane(name)));
+    ['journal','articles','issues'].forEach(name=>byId(name+'-tab').addEventListener('click',()=>switchPane(name)));
     byId('journal-form').addEventListener('input',event=>{if(event.target.type!=='file')changed();});byId('journal-form').addEventListener('change',event=>{if(event.target.type!=='file'){if(event.target.id==='js-header-layout'){settings.template_id=event.target.value;renderTemplates();}changed();}});
     byId('journal-form').addEventListener('submit',event=>{event.preventDefault();if(!dirty)changed();flush();});
     byId('journal-reload').addEventListener('click',async()=>{if(dirty&&!confirm('Bu sekmedeki ayarlar sunucuda kayıtlı ayarlarla değiştirilecek. Önce gerekliyse JSON yedeği alın. Devam edilsin mi?'))return;try{await load();showToast('Hesapta kayıtlı ayarlar yüklendi.');}catch(error){status(error.message,'error');}});
-    byId('logo-inp').addEventListener('change',event=>readAsset('logo',event.target));byId('ccby-inp').addEventListener('change',event=>readAsset('license',event.target));
-    for(const [key,id] of [['logo','logo'],['license','ccby']])byId('remove-'+key).addEventListener('click',()=>{invalidateAssetRead(key);assets[key]=null;byId(id+'-inp').value='';updateAssets();changed();});
+    byId('logo-inp').addEventListener('change',event=>readAsset('logo',event.target));byId('ccby-inp').addEventListener('change',event=>readAsset('license',event.target));byId('cover-inp').addEventListener('change',event=>readAsset('cover',event.target));byId('jenerik-inp').addEventListener('change',event=>readAsset('jenerik',event.target));
+    for(const [key,id] of [['logo','logo'],['license','ccby'],['cover','cover'],['jenerik','jenerik']])byId('remove-'+key).addEventListener('click',()=>{invalidateAssetRead(key);assets[key]=null;byId(id+'-inp').value='';updateAssets();changed();});
     byId('export-preset').addEventListener('click',exportPreset);byId('import-preset-button').addEventListener('click',()=>byId('import-preset').click());byId('import-preset').addEventListener('change',event=>importPreset(event.target.files[0]));
     // Labels inherited from the article editor are connected to their controls.
     document.querySelectorAll('#article-editor label:not([for])').forEach(label=>{const input=label.parentElement.querySelector('input,textarea,select');if(input?.id)label.htmlFor=input.id;});

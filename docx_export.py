@@ -345,15 +345,24 @@ def _scholarly_cover(doc, data, settings, assets):
     section.top_margin = Cm(.3 + block_height_cm(settings, data, 'header') + .25)
     section.bottom_margin = Cm(2)
     accent = settings['accent_color'].lstrip('#')
-    table = _table(doc, [3.1, 12.9], fit_width=_fit(settings))
-    left, right = table.rows[0].cells
-    if assets.get('logo') and settings['show_logo']:
-        _picture(left.paragraphs[0], assets['logo'], max_width_cm=2.9, max_height_cm=settings['logo_height_cm'])
-    _cell_style(right, fill='F2F2F2', padding=100)
-    names = [values['dergi']]
-    if not english and settings['journal_name_en'] and settings['journal_name_en'] != values['dergi']:
-        names.append(settings['journal_name_en'])
-    _paragraph(right, ' / '.join(filter(None, names)), size=15, bold=True, italic=True, align='center', after=8)
+    has_logo = bool(assets.get('logo') and settings['show_logo'])
+    banner = has_logo and settings['logo_mode'] == 'banner'
+    if banner:
+        # The logo file is the whole masthead (seals + journal name): full text width, no grey box.
+        right = doc
+        _picture(_paragraph(doc, align='center', after=6), assets['logo'],
+                 max_width_cm=settings['logo_width_cm'] or _text_width(settings, True), max_height_cm=12)
+    else:
+        logo_width = settings['logo_width_cm']
+        table = _table(doc, [max(3.1, logo_width + .2) if logo_width else 3.1, 12.9], fit_width=_fit(settings))
+        left, right = table.rows[0].cells
+        if has_logo:
+            _picture(left.paragraphs[0], assets['logo'], max_width_cm=logo_width or 2.9, max_height_cm=settings['logo_height_cm'])
+        _cell_style(right, fill='F2F2F2', padding=100)
+        names = [values['dergi']]
+        if not english and settings['journal_name_en'] and settings['journal_name_en'] != values['dergi']:
+            names.append(settings['journal_name_en'])
+        _paragraph(right, ' / '.join(filter(None, names)), size=15, bold=True, italic=True, align='center', after=8)
     for labels in ([('Year', 'Volume', 'Issue')] if english else [('Yıl', 'Cilt', 'Sayı'), ('Year', 'Volume', 'Issue')]):
         text = '  '.join(label + ': ' + str(cov[key]) for label, key in zip(labels, ('year', 'volume', 'issue')) if cov.get(key))
         if text:
@@ -366,7 +375,8 @@ def _scholarly_cover(doc, data, settings, assets):
         details.append('https://doi.org/' + doi)
     for text in details:
         _paragraph(right, text, size=9, align='center', before=4)
-    _compact_cell(right)
+    if not banner:
+        _compact_cell(right)
     rule = _paragraph(doc, after=14, size=1)
     border = _element('pBdr');border.append(_element('bottom', val='single', sz=16, color=accent))
     rule._p.get_or_add_pPr().append(border)
@@ -482,7 +492,7 @@ def _cover(doc, data, settings, assets):
     def logo(container, align='left'):
         if assets.get('logo') and settings['show_logo']:
             p = _paragraph(container, align=align, after=3)
-            _picture(p, assets['logo'], max_width_cm=4.2, max_height_cm=settings['logo_height_cm'])
+            _picture(p, assets['logo'], max_width_cm=settings['logo_width_cm'] or 4.2, max_height_cm=settings['logo_height_cm'])
     if layout == 'centered':
         logo(doc, 'center'); identity(doc, 'center'); details(doc, 'center')
     elif layout == 'contemporary':

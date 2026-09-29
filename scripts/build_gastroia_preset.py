@@ -17,6 +17,8 @@ sys.path.insert(0, str(ROOT))
 
 from journal_templates import normalize_settings  # noqa: E402
 
+DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
 SETTINGS = {
     # Identity. Add the Turkish journal title and website in the app if they should appear.
     'journal_name_tr': 'GASTROIA',
@@ -25,8 +27,8 @@ SETTINGS = {
     # Closest built-in cover: grey masthead, centred title, separate English summary page.
     'template_id': 'scholarly', 'header_layout': 'scholarly', 'footer_layout': 'full',
     'font_family': 'texgyretermes', 'body_size': '11', 'accent_color': '#9EC53C',
-    'logo_height_cm': 3.0, 'corresponding_marker': '*', 'doi_position': 'top',
-    'english_abstract_heading': 'Extended Summary', 'english_only': False,
+    'logo_mode': 'banner', 'logo_width_cm': 0, 'logo_height_cm': 3.0, 'corresponding_marker': '*', 'doi_position': 'top',
+    'english_abstract_heading': 'Abstract', 'english_only': False,
     'show_logo': True, 'show_cc_logo': True, 'link_citations': True,
     'footer_text': ('Bu makale Creative Commons Atıf-GayriTicari-Türetilemez 4.0 (CC BY-NC-ND 4.0) '
                     'lisansı ile yayımlanmaktadır. / This article is published under the '
@@ -38,6 +40,30 @@ SETTINGS = {
     'header_first_center': 'E-ISSN: {issn}, {cilt}({sayi}), {yil}',
     'header_font_size': '9', 'header_rule': 'line',
     'footer_mode': 'none', 'footer_first_mode': 'none', 'footer_rule': 'none',
+    # Front matter (jenerik): the uploaded blank template is filled in; the imprint text below is the
+    # fallback used only if the template is removed.
+    'frontmatter_cover': 'yes', 'frontmatter_toc': 'yes', 'toc_show_authors': 'yes', 'frontmatter_font': 'sans',
+    'frontmatter_line': 'E-ISSN: {issn} | Cilt/Volume: {cilt} | Sayı/Issue: {sayi} | Ay/Month: {ay} | Yıl/Year: {yil}',
+    'frontmatter_cover_line': 'E-ISSN: {issn}   Cilt | Volume: {cilt}   Sayı | Issue: {sayi}   Yıl | Year: {yil}',
+    'cover_text_top_cm': 26.4, 'cover_text_size_pt': 12, 'cover_text_color': '#FFFFFF',
+    'frontmatter_text': '''# SAHİBİ / OWNER
+Prof. Dr. R. Cüneyt ERENOĞLU ; Çanakkale Onsekiz Mart Üniversitesi
+#| BAŞ EDİTÖR / EDITOR IN CHIEF
+Dr. Öğr. Üyesi Erhan BABAÇ ; Çanakkale Onsekiz Mart Üniversitesi
+# EDİTÖR YARDIMCILARI / ASSISTANT EDITORS
+Dr. Öğr. Üyesi Erdem BAYDENİZ ; Aydın Adnan Menderes Üniversitesi
+# EDİTÖR KURLU / EDITORIAL BOARD | 2
+Ünvan Ad SOYAD ; Üniversitesi
+# DANIŞMA KURULU / ADVISORY BOARD | 2
+Ünvan Ad SOYAD ; Üniversitesi
+# TÜRKÇE DİL EDİTÖRÜ / TURKISH LANGUAGE EDITOR
+Ünvan Ad SOYAD ; Üniversitesi
+# İNGİLİZCE DİL EDİTÖRLERİ / ENGLISH LANGUAGE EDITORS
+Ünvan Ad SOYAD ; Üniversitesi
+# KAPAK VE DİZGİ TASARIMI / COVER AND LAYOUT DESIGN
+Arş. Gör. Gökhan KELEŞ ; Çanakkale Onsekiz Mart Üniversitesi
+# İNDEKSLER / INDEXES
+___________ İndeks''',
     # Page and paragraph layout (Yazım Kılavuzu → Sayfa Yapısı ve Yazım Kriterleri).
     'layout_mode': 'custom',
     'margin_top_cm': 0.58, 'margin_bottom_cm': 2.0, 'margin_left_cm': 2.0, 'margin_right_cm': 2.0,
@@ -61,8 +87,10 @@ def asset(path, mime='image/png'):
 def build():
     settings = normalize_settings(SETTINGS)  # fail here, not in the app, if a value is invalid
     return {'format': 'aiditor-journal-preset', 'version': 1, 'settings': settings,
-            'assets': {'logo': asset(ROOT / 'presets/assets/gastroia-logo.png'),
-                       'license': asset(ROOT / 'presets/assets/cc-by-nc-nd.png')}}
+            'assets': {'logo': asset(ROOT / 'presets/assets/gastroia-banner.png'),
+                       'license': asset(ROOT / 'presets/assets/cc-by-nc-nd.png'),
+                       'cover': asset(ROOT / 'presets/assets/gastroia-cover.png'),
+                       'jenerik': asset(ROOT / 'presets/assets/gastroia-jenerik-sablonu.docx', DOCX)}}
 
 
 if __name__ == '__main__':

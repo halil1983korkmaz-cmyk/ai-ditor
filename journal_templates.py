@@ -48,6 +48,10 @@ _DEFAULTS = {
     'template_id': 'classic', 'header_layout': 'classic', 'footer_layout': 'full',
     'show_logo': True, 'show_cc_logo': True, 'link_citations': True,
     'english_abstract_heading': 'Abstract',
+    'frontmatter_text': '',
+    'frontmatter_line': 'E-ISSN: {issn} | Cilt/Volume: {cilt} | Sayı/Issue: {sayi} | Ay/Month: {ay} | Yıl/Year: {yil}',
+    'frontmatter_toc_heading': 'İÇİNDEKİLER / TABLE OF CONTENTS',
+    'frontmatter_cover_line': 'E-ISSN: {issn}   Cilt | Volume: {cilt}   Sayı | Issue: {sayi}   Yıl | Year: {yil}',
 }
 
 # Page, paragraph and APA 7 preferences. They are inert until `layout_mode` is
@@ -64,6 +68,9 @@ LAYOUT_DEFAULTS = {
     'caption_size_pt': 9.0, 'table_size_pt': 9.0, 'footnote_size_pt': 8.0,
     'ref_align': 'left', 'ref_hanging_cm': 1.25, 'ref_space_before_pt': 0.0,
     'ref_space_after_pt': 6.0, 'ref_line_spacing': 1.0, 'ref_size_pt': 0.0,
+    'logo_mode': 'side', 'logo_width_cm': 0.0,
+    'frontmatter_cover': 'yes', 'frontmatter_toc': 'yes', 'toc_show_authors': 'yes', 'frontmatter_font': 'sans',
+    'cover_text_top_cm': 26.4, 'cover_text_size_pt': 12.0, 'cover_text_color': '#FFFFFF',
 }
 APA_DEFAULTS = {
     'apa_and': '&', 'apa_et_al': 'et al.', 'apa_page_style': 'auto', 'apa_no_date': 'auto',
@@ -78,7 +85,8 @@ _LAYOUT_RANGES = {
     'heading_space_after_pt': (0, 48), 'caption_size_pt': (7, 14), 'table_size_pt': (7, 14),
     'footnote_size_pt': (6, 14), 'ref_hanging_cm': (0, 3), 'ref_space_before_pt': (0, 48),
     'ref_space_after_pt': (0, 48), 'ref_line_spacing': (0.8, 3), 'ref_size_pt': (0, 14),
-    'apa_max_ref_authors': (1, 50),
+    'apa_max_ref_authors': (1, 50), 'logo_width_cm': (0, 19), 'cover_text_top_cm': (1, 29),
+    'cover_text_size_pt': (6, 40),
 }
 _LAYOUT_CHOICES = {
     'layout_mode': {'template', 'custom'}, 'body_align': {'left', 'justify'},
@@ -86,6 +94,8 @@ _LAYOUT_CHOICES = {
     'apa_and': {'&', 've', 'and'}, 'apa_et_al': {'et al.', 'vd.', 'auto'},
     'apa_page_style': {'auto', 'tr', 'en'}, 'apa_no_date': {'auto', 't.y.', 'n.d.'},
     'apa_sort_references': {'yes', 'no'}, 'apa_check': {'warn', 'off'},
+    'logo_mode': {'side', 'banner'}, 'frontmatter_cover': {'yes', 'no'}, 'frontmatter_toc': {'yes', 'no'},
+    'toc_show_authors': {'yes', 'no'}, 'frontmatter_font': {'sans', 'journal'},
 }
 _FONT_ALIASES = {
     'palatino linotype': 'texgyrepagella', 'palatino': 'texgyrepagella',
@@ -118,6 +128,9 @@ def _normalize_layout(result):
         if isinstance(raw, bool) or not math.isfinite(number) or not low <= number <= high:
             raise ValueError(f'{key} değeri {low:g}–{high:g} arasında olmalıdır.')
         result[key] = round(number, 2)
+    if not re.fullmatch(r'#[0-9a-fA-F]{6}', str(result['cover_text_color'])):
+        raise ValueError('Kapak yazı rengi #RRGGBB biçiminde olmalıdır.')
+    result['cover_text_color'] = str(result['cover_text_color']).upper()
     if result['ref_size_pt'] and result['ref_size_pt'] < 7:
         raise ValueError('ref_size_pt değeri 0 (gövde puntosu) veya 7–14 olmalıdır.')
     result['apa_max_ref_authors'] = int(result['apa_max_ref_authors'])
@@ -163,7 +176,8 @@ def normalize_settings(raw):
     for key, maximum in {'journal_name_tr': 250, 'journal_name_en': 250, 'issn_print': 30,
                          'issn_online': 30, 'footer_text': 3000, 'journal_url': 500,
                          'corresponding_marker': 4, 'logo_stem': 80, 'cc_logo_stem': 80,
-                         'english_abstract_heading': 80}.items():
+                         'english_abstract_heading': 80, 'frontmatter_text': 20000, 'frontmatter_line': 200,
+                         'frontmatter_toc_heading': 100, 'frontmatter_cover_line': 200}.items():
         value = result[key]
         if not isinstance(value, str) or len(value) > maximum or any(ord(c) < 32 and c not in '\n\t' for c in value):
             raise ValueError(f'{key} alanı geçerli bir metin olmalıdır (en çok {maximum} karakter).')
