@@ -16,6 +16,16 @@ Geliştirici: **Alparslan Güvenç** · [MIT lisansı](LICENSE) · [Sürüm notl
 
 macOS 13 veya üzerinde DMG içindeki **AI-ditor Plus** uygulamasını **Applications** klasörüne sürükleyin. Windows'ta kurulum dosyasını çalıştırın. Uygulama kendi Python ortamını içerir; kaynak koddan çalıştırmıyorsanız Python kurulumu gerekmez. Windows masaüstü penceresi Microsoft Edge WebView2 kullanır. macOS uygulaması Apple noter onayına sahip değildir; ilk açılışta Sistem Ayarları → Gizlilik ve Güvenlik bölümünden izin vermenizi isteyebilir.
 
+## Kenar boşlukları, paragraf aralıkları ve APA 7 ayarları
+
+**Dergi tasarımı ve ayarları** sayfasındaki “06 / Kenar boşlukları ve paragraf” bölümünde **Şablona göre** ya da **Özel değerler** seçilir. Özel değerlerde sayfa kenar boşlukları, üst/alt bilgi uzaklığı, gövde paragrafının hizalaması, öncesi/sonrası aralığı, satır aralığı ve ilk satır girintisi; başlık, tablo/şekil başlığı, tablo ve dipnot puntoları ile kaynakça asılı girintisi ve aralığı belirlenir. Değerler Word çıktısının tamamına uygulanır. LaTeX çıktısında sayfa boşlukları, paragraf biçimi ve kaynakça girintisi uygulanır; başlık, tablo ve dipnot puntoları yalnızca Word içindir. Kapak sayfasının dikey boşlukları üst/alt bilgi yüksekliğine göre hesaplanmaya devam eder; Word, üst bilgi üst boşluktan yüksekse gövdeyi kendiliğinden aşağı iter.
+
+“07 / APA 7 kuralları” bölümü üst bilgideki kısa yazar biçimini, kaynakça sırasını ve çıktıdan sonra gösterilen APA 7 denetimini belirler: iki yazar arasında `&`/`ve`/`and`, üç ve üzeri yazarda `vd.`/`et al.`, sayfa göstergesi `s.`/`ss.` ya da `p.`/`pp.`, tarihsiz kaynak için `t.y.`/`n.d.`, kaynakçada en çok 20 yazar, DOI biçimi, aynı yazar ve yıl için a/b eki ve metinde eşleşmeyen kaynaklar. Denetim yalnızca uyarır; makale metnini ve kaynakları değiştirmez. Aynı denetim `POST /api/apa_check` ile de çalıştırılır.
+
+### GASTROIA hazır dergi ayarı
+
+`presets/gastroia-journal-preset.json`, GASTROIA makale şablonu ve APA 7 yazım kılavuzundaki değerleri içerir: A4; üst 0,58 cm, alt/sol/sağ 2 cm; Times New Roman 11 punto; paragraf öncesi ve sonrası 12 nk, satır aralığı 1,15, girintisiz paragraflar; dipnot 10 punto; kaynakçada 1,25 cm asılı girinti; `&`, dile göre `vd.`/`et al.` ve `s.`/`ss.`; E-ISSN 2602-4144; GASTROIA logosu ve CC BY-NC-ND lisans görseli. Yüklemek için **Dergi tasarımı ve ayarları → Dergi ayarlarını içe aktar** düğmesiyle dosyayı seçin. Dosya `python scripts/build_gastroia_preset.py` ile yeniden üretilir. Dergi web adresi, Türkçe dergi adı ve makaleye özgü ay bilgisi şablonlarda bulunmadığı için doldurulmamıştır; ayarlardan ekleyebilirsiniz.
+
 ## 2.2 ile gelenler
 
 - **İlk sayfa dipnotları sayfanın altında:** Word çıktısındaki yazar/dipnot, etik beyan ve dergi açıklamaları gerçek ilk sayfa alt bilgi alanına yerleştirilir. Özet kısa olduğunda yukarı taşınmaz; sonraki sayfalarda tekrarlanmaz. Özelleştirilmiş ilk sayfa alt bilgisi de korunur. Daha önce indirilen Word belgeleri için çıktıyı yeniden oluşturun.
@@ -108,6 +118,7 @@ python tests/browser_races.py
 python tests/browser_downloads.py
 python tests/browser_docx.py
 python tests/browser_scholarly.py
+python tests/browser_layout_apa.py
 ```
 
 macOS paketi: `bash build_mac.sh` · Windows paketi: `build_windows.bat` (Inno Setup gerektirir). GitHub Actions, değişikliklerde testleri; sürüm etiketlerinde macOS ve Windows paketlerini çalıştırır. Sürüm dosyaları her iki paket ve kontroller başarılı olduğunda yayımlanır.

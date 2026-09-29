@@ -49,7 +49,10 @@ def article_values(data: dict, settings: dict) -> dict:
     english = settings.get('english_only', False)
     title = ((cov.get('en_title') or cov.get('tr_title')) if english else (cov.get('tr_title') or cov.get('en_title'))) or ''
     names = [a.get('name', '').split()[-1] for a in data.get('authors', []) if a.get('name', '').strip()]
-    authors = cov.get('author_short') or (' & '.join(names) if len(names) <= 2 else names[0] + ' et al.')
+    joiner = {'&': ' & ', 've': ' ve ', 'and': ' and '}[settings.get('apa_and', '&')]
+    et_al = settings.get('apa_et_al', 'et al.')
+    et_al = ('et al.' if english else 'vd.') if et_al == 'auto' else et_al
+    authors = cov.get('author_short') or (joiner.join(names) if len(names) <= 2 else names[0] + ' ' + et_al)
     journal = (settings.get('journal_name_en') or settings.get('journal_name_tr')) if english else (settings.get('journal_name_tr') or settings.get('journal_name_en'))
     return {'dergi': journal or '', 'dergi_en': settings.get('journal_name_en', ''), 'baslik': title,
             'kisa_baslik': title if len(title) <= 100 else title[:97].rstrip() + '…', 'yazarlar': authors,

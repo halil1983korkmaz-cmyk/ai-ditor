@@ -341,7 +341,40 @@ textarea { resize:vertical; }
 <p class="mt-3 mb-2">Bir metin alanını seçip otomatik bilgi ekleyin:</p><div class="running-tokens">{% for token,label in running_tokens.items() %}<button class="btn btn-sm btn-outline-secondary" type="button" data-running-token="{{token}}">{{label}}</button>{% endfor %}</div><small id="running-token-status" role="status">Örneğin {dergi} — {yil}, Cilt {cilt} · Sayfa {sayfa}. En çok 180 karakter ve 3 satır.</small>
 <div class="running-previews" id="running-previews" aria-label="Sayfa üst ve alt bilgi taslakları"></div><small>Taslaklar temsili sayfa numaralarıyla gösterilir. Gerçek çıktı makalenin bilgilerini kullanır. Çift sayıdan başlayan belgelerde LibreOffice tek/çift düzenini farklı yorumlayabilir; son kontrolü Word veya LaTeX PDF üzerinde yapın.</small>
 </div>
-<div class="settings-section"><span class="eyebrow">06 / ATIF BAĞLANTILARI</span><h2>Metinden kaynakçaya</h2><label><input type="checkbox" class="form-check-input" id="js-link-citations" checked> Metin içi atıfları kaynakçadaki ilgili kayda bağla</label><p class="mt-2">APA yazar–yıl biçiminde tekil olarak eşleşen atıflar Word ve PDF içinde tıklanabilir olur. Örneğin (Yılmaz, 2020), Kaya ve Demir (2021), Smith et al. (2022). Belirsiz eşleşmeler bağlantısız bırakılır. Kaynakçada DOI veya web adresi varsa oradan yayına ulaşılır. Kaynak doğrulaması yapmaz; kaynakları düzeltmez.</p></div>
+<div class="settings-section" id="layout-settings"><span class="eyebrow">06 / KENAR BOŞLUKLARI VE PARAGRAF</span><h2>Sayfa ve paragraf düzeni</h2>
+<p>“Şablona göre” seçiliyken seçtiğiniz düzenin kendi değerleri kullanılır. “Özel değerler” seçildiğinde aşağıdaki kenar boşlukları ve paragraf ayarları Word çıktısının tamamına, LaTeX çıktısının ise sayfa boşluklarına ve makale gövdesine uygulanır. Kapak sayfasının dikey boşlukları, üst ve alt bilgi yüksekliğine göre otomatik hesaplanmaya devam eder.</p>
+<div class="row g-3"><div class="col-md-6"><label for="js-layout_mode">Değer kaynağı</label><select class="form-select" id="js-layout_mode" data-journal-setting="layout_mode"><option value="template">Şablona göre</option><option value="custom">Özel değerler</option></select></div></div>
+<fieldset id="layout-custom-fields" class="mt-3" disabled><legend class="h6">Kenar boşlukları · cm</legend><div class="row g-3">
+{% for key, label in [('margin_top_cm','Üst'),('margin_bottom_cm','Alt'),('margin_left_cm','Sol'),('margin_right_cm','Sağ'),('header_distance_cm','Üst bilgi uzaklığı'),('footer_distance_cm','Alt bilgi uzaklığı')] %}
+<div class="col-6 col-md-2"><label for="js-{{key}}">{{label}}</label><input class="form-control" type="number" step="0.01" min="0.2" max="6" id="js-{{key}}" data-journal-setting="{{key}}"></div>{% endfor %}
+<div class="col-12"><small>Üst bilgi bir sayfanın üst boşluğundan yüksekse Word gövdeyi otomatik aşağı iter. Yazım kılavuzunuzdaki değerleri (ör. üst 0,58 cm, diğer kenarlar 2 cm) doğrudan girebilirsiniz.</small></div></div>
+<legend class="h6 mt-4">Makale gövdesi</legend><div class="row g-3">
+<div class="col-md-3"><label for="js-body_align">Hizalama</label><select class="form-select" id="js-body_align" data-journal-setting="body_align"><option value="justify">İki yana yaslı</option><option value="left">Sola yaslı</option></select></div>
+{% for key, label, step in [('body_space_before_pt','Paragraf öncesi · nk','1'),('body_space_after_pt','Paragraf sonrası · nk','1'),('body_line_spacing','Satır aralığı · kat','0.05'),('body_first_line_indent_cm','İlk satır girintisi · cm','0.05')] %}
+<div class="col-6 col-md-3"><label for="js-{{key}}">{{label}}</label><input class="form-control" type="number" step="{{step}}" min="0" max="48" id="js-{{key}}" data-journal-setting="{{key}}"></div>{% endfor %}
+</div>
+<legend class="h6 mt-4">Başlıklar, tablolar ve dipnotlar</legend><div class="row g-3">
+{% for key, label, step in [('heading_size_pt','Başlık puntosu','0.5'),('heading_space_before_pt','Başlık öncesi · nk','1'),('heading_space_after_pt','Başlık sonrası · nk','1'),('caption_size_pt','Tablo/şekil başlığı · punto','0.5'),('table_size_pt','Tablo metni · punto','0.5'),('footnote_size_pt','Dipnot · punto','0.5')] %}
+<div class="col-6 col-md-2"><label for="js-{{key}}">{{label}}</label><input class="form-control" type="number" step="{{step}}" min="0" max="48" id="js-{{key}}" data-journal-setting="{{key}}"></div>{% endfor %}
+<div class="col-md-3"><label for="js-heading1_align">Birinci düzey başlık</label><select class="form-select" id="js-heading1_align" data-journal-setting="heading1_align"><option value="left">Sola yaslı</option><option value="center">Ortalı</option></select></div>
+</div>
+<legend class="h6 mt-4">Kaynakça</legend><div class="row g-3">
+<div class="col-md-3"><label for="js-ref_align">Hizalama</label><select class="form-select" id="js-ref_align" data-journal-setting="ref_align"><option value="left">Sola yaslı</option><option value="justify">İki yana yaslı</option></select></div>
+{% for key, label, step in [('ref_hanging_cm','Asılı girinti · cm','0.05'),('ref_space_before_pt','Kayıt öncesi · nk','1'),('ref_space_after_pt','Kayıt sonrası · nk','1'),('ref_line_spacing','Satır aralığı · kat','0.05'),('ref_size_pt','Punto (0 = gövde)','0.5')] %}
+<div class="col-6 col-md-2"><label for="js-{{key}}">{{label}}</label><input class="form-control" type="number" step="{{step}}" min="0" max="48" id="js-{{key}}" data-journal-setting="{{key}}"></div>{% endfor %}
+</div></fieldset></div>
+<div class="settings-section" id="apa-settings"><span class="eyebrow">07 / APA 7 KURALLARI</span><h2>Atıf ve kaynakça tercihleri</h2>
+<p>Bu tercihler üst bilgideki kısa yazar biçimini, kaynakçanın sıralanmasını ve çıktı sonrasında gösterilen APA 7 denetimini belirler. Denetim yalnızca uyarı verir; metninizi veya kaynaklarınızı değiştirmez.</p>
+<div class="row g-3">
+<div class="col-md-4"><label for="js-apa_and">İki yazar arasında</label><select class="form-select" id="js-apa_and" data-journal-setting="apa_and"><option value="&amp;">&amp; (Karaca &amp; San, 2021)</option><option value="ve">ve (Karaca ve San, 2021)</option><option value="and">and (Karaca and San, 2021)</option></select></div>
+<div class="col-md-4"><label for="js-apa_et_al">Üç ve üzeri yazar</label><select class="form-select" id="js-apa_et_al" data-journal-setting="apa_et_al"><option value="et al.">et al.</option><option value="vd.">vd.</option><option value="auto">Dile göre (Türkçe: vd., İngilizce: et al.)</option></select></div>
+<div class="col-md-4"><label for="js-apa_page_style">Sayfa göstergesi</label><select class="form-select" id="js-apa_page_style" data-journal-setting="apa_page_style"><option value="auto">Dile göre</option><option value="tr">s. / ss.</option><option value="en">p. / pp.</option></select></div>
+<div class="col-md-4"><label for="js-apa_no_date">Tarihsiz kaynak</label><select class="form-select" id="js-apa_no_date" data-journal-setting="apa_no_date"><option value="auto">Dile göre</option><option value="t.y.">t.y.</option><option value="n.d.">n.d.</option></select></div>
+<div class="col-md-4"><label for="js-apa_max_ref_authors">Kaynakçada en çok yazar</label><input class="form-control" type="number" min="1" max="50" step="1" id="js-apa_max_ref_authors" data-journal-setting="apa_max_ref_authors"><small>APA 7: 20. Daha uzun listelerde ilk 19 yazar, “…” ve son yazar.</small></div>
+<div class="col-md-4"><label for="js-apa_sort_references">Kaynakça sırası</label><select class="form-select" id="js-apa_sort_references" data-journal-setting="apa_sort_references"><option value="yes">Türkçe alfabeye göre sırala</option><option value="no">Girilen sırayı koru</option></select></div>
+<div class="col-md-6"><label for="js-apa_check">APA 7 denetimi</label><select class="form-select" id="js-apa_check" data-journal-setting="apa_check"><option value="warn">Çıktıdan sonra uyarıları göster</option><option value="off">Kapalı</option></select></div>
+</div></div>
+<div class="settings-section"><span class="eyebrow">08 / ATIF BAĞLANTILARI</span><h2>Metinden kaynakçaya</h2><label><input type="checkbox" class="form-check-input" id="js-link-citations" checked> Metin içi atıfları kaynakçadaki ilgili kayda bağla</label><p class="mt-2">APA yazar–yıl biçiminde tekil olarak eşleşen atıflar Word ve PDF içinde tıklanabilir olur. Örneğin (Yılmaz, 2020), Kaya ve Demir (2021), Smith et al. (2022). Belirsiz eşleşmeler bağlantısız bırakılır. Kaynakçada DOI veya web adresi varsa oradan yayına ulaşılır. Kaynak doğrulaması yapmaz; kaynakları düzeltmez.</p></div>
   <div class="journal-savebar"><div><span id="journal-save-status" role="status" aria-live="polite">Ayarlar yükleniyor…</span><small>Değişiklikler otomatik kaydedilir.</small></div><button type="submit" class="btn btn-jgttr" id="save-journal">Ayarları kaydet</button><button type="button" id="journal-reload" class="btn btn-outline-secondary" hidden>Sunucudaki ayarları yükle</button></div>
   </form>
   <aside class="setup-aside"><div class="preview-card"><span class="eyebrow">CANLI TASARIM TASLAĞI</span><div id="live-preview"></div><p>Dergi kimliğiniz ve görsel tercihleriniz burada görünür.</p></div><div class="portable-card"><h3>Ayarlarınız taşınabilir.</h3><p>Dergi adı, düzen, dipnot ve logoları tek dosyada yedekleyin.</p><button type="button" id="export-preset" class="btn btn-outline-secondary w-100">Dergi ayarlarını yedekle</button><button type="button" id="import-preset-button" class="btn btn-link w-100">Dergi ayarlarını içe aktar</button><input type="file" id="import-preset" accept=".json" hidden><small>Makale JSON yedeği, Makaleler alanından alınır.</small></div></aside>
@@ -602,6 +635,7 @@ textarea { resize:vertical; }
     <button id="dl-docx" type="button" class="btn btn-success btn-lg px-4" onclick="downloadArticleDocx()" hidden>Word (.docx) indir</button>
     <p id="docx-download-status" class="mt-3 mb-0" role="status" aria-live="polite"></p>
     <p id="citation-result" class="mt-3 mb-0"></p>
+    <div id="apa-result" class="mt-2" role="status"></div>
     <p id="word-next-steps" class="mt-3" hidden>Word belgesini açıp doğrudan düzenleyebilirsiniz. Yazı tipi ve Word sürümüne göre satır ve sayfa sonları değişebilir. Bağlantıları açmak için Word ayarınıza göre ⌘/Ctrl tuşuyla tıklamanız gerekebilir.</p>
     <p id="zip-download-status" class="mt-3 mb-0" role="status" aria-live="polite"></p>
     <div id="latex-next-steps" class="mt-4 p-3 text-start" style="background:#fffde7;border-radius:8px;font-size:.83rem;color:#555">
@@ -1989,6 +2023,7 @@ async function doGenerate(kind = 'zip') {
     document.getElementById('docx-download-status').textContent = '';
     const report = res.citations;
     document.getElementById('citation-result').textContent = report?.enabled ? `${report.linked_in_body} metin içi atıf kaynakçaya bağlandı. ${report.ambiguous_references} belirsiz, ${report.unrecognized_references} tanınmayan kaynak kaydı. Bağlantısız atıfları son kontrolde gözden geçirin.` : 'Atıf bağlantıları kapalı.';
+    renderApaReport(res.apa);
     document.getElementById('zip-download-status').textContent = '';
     document.getElementById('result-panel').style.display = 'block';
     document.getElementById('result-panel').scrollIntoView({ behavior:'smooth' });

@@ -1,5 +1,11 @@
 # Sürüm geçmişi
 
+## Yayımlanmamış — kenar boşlukları, paragraf aralıkları ve APA 7 ayarları
+
+Dergi ayarlarına iki bölüm eklendi. **Kenar boşlukları ve paragraf** bölümünde “Şablona göre / Özel değerler” seçimi vardır; özel değerlerde dört kenar boşluğu, üst/alt bilgi uzaklığı, paragraf öncesi ve sonrası aralık, satır aralığı, ilk satır girintisi, başlık puntosu ve aralıkları, tablo/şekil başlığı ve tablo metni puntosu, dipnot puntosu ile kaynakça asılı girintisi, aralığı ve puntosu Word çıktısına uygulanır; LaTeX çıktısında sayfa boşlukları, paragraf biçimi ve kaynakça girintisi kullanılır. Varsayılan “Şablona göre” seçiminde mevcut şablonların çıktısı değişmez. **APA 7 kuralları** bölümü iki yazar arası bağlaç (&, ve, and), üç ve üzeri yazar için vd./et al., sayfa göstergesi (s./ss., p./pp.), t.y./n.d., kaynakçada en çok yazar sayısı ve kaynakça sıralamasını belirler. Çıktı sonrasında ve `/api/apa_check` ile bu tercihlere göre yalnızca uyarı veren, metni değiştirmeyen APA 7 denetimi çalışır.
+
+`presets/gastroia-journal-preset.json`: GASTROIA makale şablonu ve APA 7 yazım kılavuzundan derlenen, **Dergi tasarımı ve ayarları → Dergi ayarlarını içe aktar** ile yüklenen hazır dergi ayarı (`scripts/build_gastroia_preset.py` ile yeniden üretilir).
+
 ## 2.2.0 — 2026-09-28
 
 Word çıktılarında ilk sayfa dipnotları, etik beyan, başlık açıklaması ve dergi notları sayfanın altındaki gerçek alt bilgi alanına taşındı. Kısa özetlerde yukarı çıkma sorunu giderildi. Kullanıcının ilk sayfa alt bilgisi korunur; kapak notları sonraki sayfalarda tekrarlanmaz. Gövde ayrı Word bölümünde devam eder ve sayfa numarası sıfırlanmaz. Eski Word dosyalarını düzeltmek için uygulamadan yeniden çıktı alın.

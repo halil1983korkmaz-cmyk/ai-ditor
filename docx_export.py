@@ -18,6 +18,7 @@ from formatter import (_cover_profile, _english_label, _normalize_table_model,
                        _numbered_section_title, _parse_table_rows, turkish_sort_key)
 from journal_templates import normalize_settings
 from citation_links import CitationIndex
+from apa_rules import ordered_references
 from page_furniture import article_values, block_height_cm, citation_text, resolved_parts, running_slots
 
 DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -34,6 +35,26 @@ def _element(tag: str, **attributes):
     for key, value in attributes.items():
         element.set(qn('w:' + key), str(value))
     return element
+
+
+def _custom(settings):
+    """True when the editor chose their own page/paragraph values."""
+    return bool(settings) and settings.get('layout_mode') == 'custom'
+
+
+def _text_width(settings, scholarly):
+    if _custom(settings):
+        return round(21 - settings['margin_left_cm'] - settings['margin_right_cm'], 3)
+    return 16 if scholarly else 18
+
+
+def _fit(settings):
+    """Target width for cover tables built for fixed margins; None keeps template widths."""
+    return _text_width(settings, False) if _custom(settings) else None
+
+
+def _footnote_size(settings, default=8):
+    return settings['footnote_size_pt'] if _custom(settings) else default
 
 
 def _paragraph(container, text='', *, size=None, bold=False, italic=False, color=None,
@@ -92,7 +113,9 @@ def _cell_style(cell, *, fill=None, border='none', padding=70):
     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
 
 
-def _table(container, widths, rows=1):
+def _table(container, widths, rows=1, fit_width=None):
+    if fit_width and sum(widths) > 0:
+        widths = [w * fit_width / sum(widths) for w in widths]
     if hasattr(container, 'sections') or hasattr(container, '_tc'):
         table = container.add_table(rows=rows, cols=len(widths))
     else:
@@ -216,6 +239,8 @@ def _setup(doc, settings, data):
         section.header_distance = Cm(1.25)
         section.top_margin = Cm(1.25 + block_height_cm(settings, data, 'header') + .65)
         section.bottom_margin = Cm(max(2.5, section.bottom_margin.cm))
+    if _custom(settings):
+        section.left_margin, section.right_margin = Cm(settings['margin_left_cm']), Cm(settings['margin_right_cm'])
     section.different_first_page_header_footer = True
     doc.settings.odd_and_even_pages_header_footer = any(settings[kind + '_mode'] == 'odd_even' for kind in ('header', 'footer'))
     start = str(data.get('cover', {}).get('start_page', '1'))
@@ -226,7 +251,7 @@ def _setup(doc, settings, data):
         for variant, attr in [('odd', kind), ('even', 'even_page_' + kind), ('first', 'first_page_' + kind)]:
             _running_part(getattr(section, attr), running_slots(settings, data, kind, variant), values,
                           size=int(settings[kind + '_font_size']), line=settings[kind + '_rule'], kind=kind, start=start,
-                          width=16 if scholarly else 18, scholarly=scholarly)
+                          width=_text_width(settings, scholarly), scholarly=scholarly)
     for name in ('Normal', 'Title', 'Subtitle', 'Heading 1', 'Heading 2', 'Heading 3', 'Caption', 'Header', 'Footer'):
         style = doc.styles[name]
         style.font.name = FONTS[settings['font_family']]
@@ -242,9 +267,11 @@ def _setup(doc, settings, data):
     for name in ('Heading 1', 'Heading 2', 'Heading 3'):
         style = doc.styles[name]
         style.font.bold = True
-        style.font.size = Pt(11)
+        style.font.size = Pt(settings['heading_size_pt'] if _custom(settings) else 11)
         style.paragraph_format.keep_with_next = True
         style.paragraph_format.space_before = Pt(8)
+    if _custom(settings):
+        doc.styles['Caption'].font.size = Pt(settings['caption_size_pt'])
     doc.core_properties.title = values['baslik']
     doc.core_properties.author = '; '.join(a.get('name', '') for a in data.get('authors', []))
     doc.core_properties.subject = values['dergi']
@@ -299,6 +326,10 @@ def _body_section(doc, settings, data):
     section.header_distance = Cm(1.25 if scholarly else .8)
     section.top_margin = Cm((1.25 if scholarly else .8) + block_height_cm(settings, data, 'header') + (.65 if scholarly else .4))
     section.bottom_margin = Cm(max(2.5 if scholarly else 1.85, .8 + block_height_cm(settings, data, 'footer') + .4))
+    if _custom(settings):
+        section.left_margin, section.right_margin = Cm(settings['margin_left_cm']), Cm(settings['margin_right_cm'])
+        section.top_margin, section.bottom_margin = Cm(settings['margin_top_cm']), Cm(settings['margin_bottom_cm'])
+        section.header_distance, section.footer_distance = Cm(settings['header_distance_cm']), Cm(settings['footer_distance_cm'])
     # The cloned section must continue numbering, not restart at the article's first page.
     for number in list(section._sectPr.findall(qn('w:pgNumType'))):
         section._sectPr.remove(number)
@@ -314,7 +345,7 @@ def _scholarly_cover(doc, data, settings, assets):
     section.top_margin = Cm(.3 + block_height_cm(settings, data, 'header') + .25)
     section.bottom_margin = Cm(2)
     accent = settings['accent_color'].lstrip('#')
-    table = _table(doc, [3.1, 12.9])
+    table = _table(doc, [3.1, 12.9], fit_width=_fit(settings))
     left, right = table.rows[0].cells
     if assets.get('logo') and settings['show_logo']:
         _picture(left.paragraphs[0], assets['logo'], max_width_cm=2.9, max_height_cm=settings['logo_height_cm'])
@@ -393,12 +424,12 @@ def _scholarly_cover(doc, data, settings, assets):
         add_abstract('tr', 'Öz', 'Anahtar kelimeler')
     footer, original = _start_cover_footer(doc)
     if doi and settings['doi_position'] == 'bottom':
-        _paragraph(footer, 'https://doi.org/' + doi, size=8, after=2)
+        _paragraph(footer, 'https://doi.org/' + doi, size=_footnote_size(settings), after=2)
     for label, value in [('Ethics Statement: ' if english else 'Etik Beyan: ', cov.get('ethics')),
                          ('* ', cov.get('title_note')), ('', settings['footer_text']),
                          ('Editor: ' if english else 'Editör / Editor: ', cov.get('editor'))]:
         if value:
-            _paragraph(footer, label + value, size=8, before=4)
+            _paragraph(footer, label + value, size=_footnote_size(settings), before=4)
     if assets.get('license') and settings['show_cc_logo']:
         _picture(_paragraph(footer), assets['license'], max_width_cm=5, max_height_cm=.5)
     # Editorial contact/dates belong to the cover footer; the user-controlled
@@ -409,13 +440,13 @@ def _scholarly_cover(doc, data, settings, assets):
             contacts.append(' · '.join(str(author.get(k, '')).strip() for k in ('name', 'email', 'orcid') if str(author.get(k, '')).strip()))
     p = None
     if contacts:
-        p = _paragraph(footer, size=8, after=0)
-        _run(p, 'Corresponding Author: ' if english else 'Sorumlu Yazar / Corresponding Author: ', 8, bold=True)
-        _text(p, '; '.join(contacts), size=8)
+        p = _paragraph(footer, size=_footnote_size(settings), after=0)
+        _run(p, 'Corresponding Author: ' if english else 'Sorumlu Yazar / Corresponding Author: ', _footnote_size(settings), bold=True)
+        _text(p, '; '.join(contacts), size=_footnote_size(settings))
     labels = [('Received', 'received'), ('Accepted', 'accepted'), ('Published', 'published')] if english else [('Gönderim / Received', 'received'), ('Kabul / Accepted', 'accepted'), ('Yayımlanma / Published', 'published')]
     dates = [label + ': ' + str(cov[key]) for label, key in labels if cov.get(key)]
     if dates:
-        dates_p = _paragraph(footer, '    '.join(dates), size=8, after=0)
+        dates_p = _paragraph(footer, '    '.join(dates), size=_footnote_size(settings), after=0)
         p = p or dates_p
     _finish_cover_footer(doc, footer, original, settings, data)
     if has_tr and has_en and not english:
@@ -455,14 +486,14 @@ def _cover(doc, data, settings, assets):
     if layout == 'centered':
         logo(doc, 'center'); identity(doc, 'center'); details(doc, 'center')
     elif layout == 'contemporary':
-        table = _table(doc, [13, 5])
+        table = _table(doc, [13, 5], fit_width=_fit(settings))
         left, right = table.rows[0].cells
         _cell_style(left, fill=accent, padding=110)
         identity(left, color='FFFFFF'); logo(right, 'right')
         _compact_cell(left); _compact_cell(right)
         details(doc)
     else:
-        table = _table(doc, [5, 13] if layout == 'classic' else [13, 5])
+        table = _table(doc, [5, 13] if layout == 'classic' else [13, 5], fit_width=_fit(settings))
         left, right = table.rows[0].cells
         if layout == 'classic':
             logo(left); identity(right, 'right'); details(right, 'right')
@@ -510,7 +541,7 @@ def _cover(doc, data, settings, assets):
             _run(p, keywords + ': ', 7.5, bold=True)
             _text(p, abstract[lang + '_kw'], size=7.5)
     if layout == 'classic' and languages:
-        table = _table(doc, [3.5, 14.5])
+        table = _table(doc, [3.5, 14.5], fit_width=_fit(settings))
         left, right = table.rows[0].cells
         for label, value in date_items:
             if value:
@@ -524,14 +555,14 @@ def _cover(doc, data, settings, assets):
         if dates:
             _paragraph(doc, dates, size=7.5, after=5)
         if layout == 'contemporary' and len(languages) == 2:
-            table = _table(doc, [9, 9])
+            table = _table(doc, [9, 9], fit_width=_fit(settings))
             for cell, item in zip(table.rows[0].cells, languages):
                 add_abstract(cell, item); _compact_cell(cell)
         else:
             for item in languages:
                 add_abstract(doc, item)
     footer, original = _start_cover_footer(doc)
-    fs = float(profile['footer'][0])
+    fs = _footnote_size(settings, float(profile['footer'][0]))
     for i, author in enumerate(authors):
         info = ' · '.join(str(author.get(k, '')).strip() for k in ('title', 'affiliation', 'email') if str(author.get(k, '')).strip())
         orcid = str(author.get('orcid', '')).strip().removeprefix('https://orcid.org/')
@@ -554,9 +585,11 @@ def _cover(doc, data, settings, assets):
     _finish_cover_footer(doc, footer, original, settings, data)
 
 
-def _figure_or_table(doc, item, figures, english):
+def _figure_or_table(doc, item, figures, english, settings=None):
     section = doc.sections[0]
     available_width = (section.page_width - section.left_margin - section.right_margin) / Cm(1)
+    caption_size = settings['caption_size_pt'] if _custom(settings) else 9
+    default_table_size = settings['table_size_pt'] if _custom(settings) else 9
     caption = (item.get('en_cap') or item.get('tr_cap', '')) if english else ' / '.join(t for t in (item.get('tr_cap'), item.get('en_cap')) if t)
     is_figure = item['type'] == 'figure'
     label = ('Figure' if english else 'Şekil') if is_figure else ('Table' if english else 'Tablo')
@@ -572,19 +605,19 @@ def _figure_or_table(doc, item, figures, english):
         width = max(50, min(100, width)) if math.isfinite(width) else 90
         p = _paragraph(doc, align='center', keep=True, before=4)
         _picture(p, asset, max_width_cm=available_width * width / 100, max_height_cm=13)
-        _paragraph(doc, title, size=9, bold=True, align='center', after=6, style='Caption')
+        _paragraph(doc, title, size=caption_size, bold=True, align='center', after=6, style='Caption')
         return
-    _paragraph(doc, title, size=9, bold=True, align='center', keep=True, before=4, style='Caption')
+    _paragraph(doc, title, size=caption_size, bold=True, align='center', keep=True, before=4, style='Caption')
     source = copy.deepcopy(item)
     if not isinstance(source.get('tbl_model'), dict) or not source['tbl_model'].get('rows'):
         source['tbl_model'] = {'rows': [[{'text': cell} for cell in row] for row in _parse_table_rows(source.get('tbl_data', ''))], 'header_rows': 1}
     model = _normalize_table_model(source)
     table = _table(doc, [available_width * width for width in model['widths']], rows=len(model['rows']))
     try:
-        fs = float(item.get('tbl_fontsize') or 9)
+        fs = float(item.get('tbl_fontsize') or default_table_size)
     except (TypeError, ValueError):
-        fs = 9
-    fs = max(7, min(12, fs)) if math.isfinite(fs) else 9
+        fs = default_table_size
+    fs = max(7, min(12, fs)) if math.isfinite(fs) else default_table_size
     for row_index, entries in enumerate(model['layout']):
         row = table.rows[row_index]
         if row_index < model['header_rows']:
@@ -611,10 +644,33 @@ def _figure_or_table(doc, item, figures, english):
     _paragraph(doc, after=3, size=2)
 
 
+def _heading(doc, title, level, settings, scholarly):
+    """Section heading; editor-defined size/spacing/alignment when the layout is custom."""
+    if _custom(settings):
+        align = settings['heading1_align'] if level == 1 else 'left'
+        return _paragraph(doc, title, style='Heading ' + str(level), bold=True, keep=True, align=align,
+                          before=settings['heading_space_before_pt'], after=settings['heading_space_after_pt'])
+    return _paragraph(doc, title, style='Heading ' + str(level), bold=True, keep=True, before=8, after=4,
+                      align='center' if level == 1 and not scholarly else 'left')
+
+
+def _format_body_paragraph(p, settings, scholarly):
+    fmt = p.paragraph_format
+    if _custom(settings):
+        p.alignment = ALIGN[settings['body_align']]
+        fmt.space_before, fmt.space_after = Pt(settings['body_space_before_pt']), Pt(settings['body_space_after_pt'])
+        fmt.line_spacing = settings['body_line_spacing']
+        fmt.first_line_indent = Cm(settings['body_first_line_indent_cm'])
+    elif scholarly:
+        fmt.first_line_indent = Cm(1.25)
+        fmt.line_spacing = 1.5
+        fmt.space_after = Pt(0)
+
+
 def _body(doc, data, settings, figures):
     english = settings['english_only']
     scholarly = settings['template_id'] == 'scholarly'
-    refs = sorted([r.strip() for r in data.get('references', '').splitlines() if r.strip()], key=turkish_sort_key)
+    refs = ordered_references(data, settings, turkish_sort_key)
     citations = CitationIndex(refs, settings['link_citations'])
     items = data.get('figtables', [])
     placed = set()
@@ -625,20 +681,16 @@ def _body(doc, data, settings, figures):
             title = detected[0]
         title = (_english_label(title) if english else title) or ('Section' if english else 'Bölüm')
         level = max(1, min(3, int(section.get('level', '1'))))
-        _paragraph(doc, title, style='Heading ' + str(level), bold=True, keep=True, before=8, after=4,
-                   align='center' if level == 1 and not scholarly else 'left')
+        _heading(doc, title, level, settings, scholarly)
         assigned = [(i, item) for i, item in enumerate(items) if i not in placed and
                     (str(item.get('section_id')) == str(section.get('id')) if item.get('section_id') is not None and section.get('id') is not None else item.get('section', '').strip() == section.get('name', '').strip())]
         for i, item in assigned:
             if item.get('placement') == 'section_start':
-                _figure_or_table(doc, item, figures, english); placed.add(i)
+                _figure_or_table(doc, item, figures, english, settings); placed.add(i)
         for para in re.split(r'\n\s*\n', section.get('content', '').strip()):
             if para.strip():
                 p = _paragraph(doc, align='justify')
-                if scholarly:
-                    p.paragraph_format.first_line_indent = Cm(1.25)
-                    p.paragraph_format.line_spacing = 1.5
-                    p.paragraph_format.space_after = Pt(0)
+                _format_body_paragraph(p, settings, scholarly)
                 cursor = 0
                 for start, end, index in citations.spans(para.strip()):
                     _text(p, para.strip()[cursor:start])
@@ -651,31 +703,46 @@ def _body(doc, data, settings, figures):
                 for i, item in assigned:
                     anchor = item.get('after_para', '').strip()
                     if i not in placed and anchor and anchor.lower() in para.lower():
-                        _figure_or_table(doc, item, figures, english); placed.add(i)
+                        _figure_or_table(doc, item, figures, english, settings); placed.add(i)
         for i, item in assigned:
             if i not in placed:
-                _figure_or_table(doc, item, figures, english); placed.add(i)
+                _figure_or_table(doc, item, figures, english, settings); placed.add(i)
     for i, item in enumerate(items):
         if i not in placed:
-            _figure_or_table(doc, item, figures, english)
+            _figure_or_table(doc, item, figures, english, settings)
     labels = [('ack', 'Acknowledgements' if english else 'Teşekkür / Acknowledgements'),
               ('contrib', 'Author Contributions' if english else 'Araştırmacıların Katkı Oranı / Author Contributions'),
               ('conflict', 'Conflict of Interest' if english else 'Çıkar Çatışması / Conflict of Interest')]
     for key, title in labels:
         text = data.get('extra', {}).get(key, '').strip()
         if text:
-            _paragraph(doc, title, style='Heading 1', bold=True, keep=True, before=8)
-            _paragraph(doc, text, align='justify')
-    refs = sorted([ref.strip() for ref in data.get('references', '').splitlines() if ref.strip()], key=turkish_sort_key)
+            if _custom(settings):
+                _heading(doc, title, 1, settings, scholarly)
+            else:
+                _paragraph(doc, title, style='Heading 1', bold=True, keep=True, before=8)
+            _format_body_paragraph(_paragraph(doc, text, align='justify'), settings, False)
     if refs:
-        _paragraph(doc, 'References' if english else ('Kaynaklar' if scholarly else 'Kaynakça / References'), style='Heading 1', bold=True, keep=True, before=8, align='center' if scholarly else 'left')
+        heading = 'References' if english else ('Kaynaklar' if scholarly else 'Kaynakça / References')
+        if _custom(settings):
+            _heading(doc, heading, 1, settings, scholarly)
+        else:
+            _paragraph(doc, heading, style='Heading 1', bold=True, keep=True, before=8, align='center' if scholarly else 'left')
         for index, ref in enumerate(refs):
             p = _paragraph(doc, ref)
             p._p.insert(1, _element('bookmarkStart', id=index, name='aiditor_ref_' + str(index)))
             p._p.append(_element('bookmarkEnd', id=index))
-            p.paragraph_format.left_indent = Cm(.5)
-            p.paragraph_format.first_line_indent = Cm(-.5)
-            if scholarly:
+            hanging = Cm(settings['ref_hanging_cm']) if _custom(settings) else Cm(.5)
+            p.paragraph_format.left_indent = hanging
+            p.paragraph_format.first_line_indent = -hanging
+            if _custom(settings):
+                p.alignment = ALIGN[settings['ref_align']]
+                p.paragraph_format.space_before = Pt(settings['ref_space_before_pt'])
+                p.paragraph_format.space_after = Pt(settings['ref_space_after_pt'])
+                p.paragraph_format.line_spacing = settings['ref_line_spacing']
+                if settings['ref_size_pt']:
+                    for run in p.runs:
+                        run.font.size = Pt(settings['ref_size_pt'])
+            elif scholarly:
                 p.paragraph_format.line_spacing = 1.5
                 p.paragraph_format.space_after = Pt(6)
                 for run in p.runs:

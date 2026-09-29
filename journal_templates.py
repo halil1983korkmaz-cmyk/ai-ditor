@@ -49,6 +49,44 @@ _DEFAULTS = {
     'show_logo': True, 'show_cc_logo': True, 'link_citations': True,
     'english_abstract_heading': 'Abstract',
 }
+
+# Page, paragraph and APA 7 preferences. They are inert until `layout_mode` is
+# 'custom' (page/paragraph values) so every built-in template renders exactly as
+# before; APA options default to the behaviour that predates them.
+LAYOUT_DEFAULTS = {
+    'layout_mode': 'template',
+    'margin_top_cm': 2.5, 'margin_bottom_cm': 2.5, 'margin_left_cm': 2.5, 'margin_right_cm': 2.5,
+    'header_distance_cm': 1.25, 'footer_distance_cm': 1.25,
+    'body_align': 'justify', 'body_space_before_pt': 0.0, 'body_space_after_pt': 6.0,
+    'body_line_spacing': 1.15, 'body_first_line_indent_cm': 0.0,
+    'heading_size_pt': 11.0, 'heading_space_before_pt': 12.0, 'heading_space_after_pt': 6.0,
+    'heading1_align': 'left',
+    'caption_size_pt': 9.0, 'table_size_pt': 9.0, 'footnote_size_pt': 8.0,
+    'ref_align': 'left', 'ref_hanging_cm': 1.25, 'ref_space_before_pt': 0.0,
+    'ref_space_after_pt': 6.0, 'ref_line_spacing': 1.0, 'ref_size_pt': 0.0,
+}
+APA_DEFAULTS = {
+    'apa_and': '&', 'apa_et_al': 'et al.', 'apa_page_style': 'auto', 'apa_no_date': 'auto',
+    'apa_max_ref_authors': 20.0, 'apa_sort_references': 'yes', 'apa_check': 'warn',
+}
+# key: (minimum, maximum). Values arrive as numbers or numeric strings from the UI.
+_LAYOUT_RANGES = {
+    'margin_top_cm': (0.3, 6), 'margin_bottom_cm': (0.3, 6), 'margin_left_cm': (0.5, 6),
+    'margin_right_cm': (0.5, 6), 'header_distance_cm': (0.2, 4), 'footer_distance_cm': (0.2, 4),
+    'body_space_before_pt': (0, 48), 'body_space_after_pt': (0, 48), 'body_line_spacing': (0.8, 3),
+    'body_first_line_indent_cm': (0, 4), 'heading_size_pt': (8, 24), 'heading_space_before_pt': (0, 48),
+    'heading_space_after_pt': (0, 48), 'caption_size_pt': (7, 14), 'table_size_pt': (7, 14),
+    'footnote_size_pt': (6, 14), 'ref_hanging_cm': (0, 3), 'ref_space_before_pt': (0, 48),
+    'ref_space_after_pt': (0, 48), 'ref_line_spacing': (0.8, 3), 'ref_size_pt': (0, 14),
+    'apa_max_ref_authors': (1, 50),
+}
+_LAYOUT_CHOICES = {
+    'layout_mode': {'template', 'custom'}, 'body_align': {'left', 'justify'},
+    'heading1_align': {'left', 'center'}, 'ref_align': {'left', 'justify'},
+    'apa_and': {'&', 've', 'and'}, 'apa_et_al': {'et al.', 'vd.', 'auto'},
+    'apa_page_style': {'auto', 'tr', 'en'}, 'apa_no_date': {'auto', 't.y.', 'n.d.'},
+    'apa_sort_references': {'yes', 'no'}, 'apa_check': {'warn', 'off'},
+}
 _FONT_ALIASES = {
     'palatino linotype': 'texgyrepagella', 'palatino': 'texgyrepagella',
     'tex gyre pagella': 'texgyrepagella', 'times new roman': 'texgyretermes',
@@ -60,7 +98,29 @@ _FONT_ALIASES = {
 
 
 def default_settings():
-    return {**_DEFAULTS, **RUNNING_DEFAULTS}
+    return {**_DEFAULTS, **RUNNING_DEFAULTS, **LAYOUT_DEFAULTS, **APA_DEFAULTS}
+
+
+def _normalize_layout(result):
+    for key, choices in _LAYOUT_CHOICES.items():
+        value = str(result[key]).strip().lower()
+        if value not in choices:
+            raise ValueError(f'Geçersiz {key} seçeneği.')
+        result[key] = value
+    for key, (low, high) in _LAYOUT_RANGES.items():
+        raw = result[key]
+        if isinstance(raw, str) and not raw.strip():
+            raw = (LAYOUT_DEFAULTS | APA_DEFAULTS)[key]
+        try:
+            number = float(str(raw).replace(',', '.')) if isinstance(raw, str) else float(raw)
+        except (TypeError, ValueError):
+            raise ValueError(f'{key} bir sayı olmalıdır.') from None
+        if isinstance(raw, bool) or not math.isfinite(number) or not low <= number <= high:
+            raise ValueError(f'{key} değeri {low:g}–{high:g} arasında olmalıdır.')
+        result[key] = round(number, 2)
+    if result['ref_size_pt'] and result['ref_size_pt'] < 7:
+        raise ValueError('ref_size_pt değeri 0 (gövde puntosu) veya 7–14 olmalıdır.')
+    result['apa_max_ref_authors'] = int(result['apa_max_ref_authors'])
 
 
 def normalize_settings(raw):
@@ -133,5 +193,6 @@ def normalize_settings(raw):
             raise ValueError('Logo dosyası için güvenli bir ad gereklidir.')
     if result['corresponding_marker'] not in {'*', '†', '‡', '§', '¶', '#', '★', '✉'}:
         raise ValueError('Desteklenmeyen sorumlu yazar işareti.')
+    _normalize_layout(result)
     result.update(normalize_running(raw))
     return result

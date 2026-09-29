@@ -22,6 +22,7 @@ from werkzeug.utils import secure_filename
 from account_store import AccountStore, DuplicateUsername, RevisionConflict, check_id, data_directory
 from journal_templates import TEMPLATES, default_settings, normalize_settings
 from citation_links import citation_report
+from apa_rules import check_article
 from page_furniture import TOKENS, RUNNING_DEFAULTS
 from docx_export import generate_docx_from_form, DOCX_MIME
 from formatter import generate_latex_from_form, extract_form_data_from_docx, _normalize_table_model
@@ -465,6 +466,16 @@ def journal_settings():
     return jsonify(ok=True, **store.save_journal(owner, settings, assets, payload.get('base_revision')))
 
 
+@app.route('/api/apa_check', methods=['POST'])
+def apa_check():
+    payload = json_object()
+    data = payload.get('data')
+    validate_form(data, draft=True)
+    saved = account_store().journal(session['account_id'])['settings']
+    settings = normalize_settings(payload['settings'] if 'settings' in payload else saved)
+    return jsonify(ok=True, apa=check_article(data, settings))
+
+
 @app.route('/api/articles')
 def list_articles():
     return jsonify(ok=True, articles=account_store().articles(session['account_id']))
@@ -552,7 +563,7 @@ def process_form():
             ).encode('utf-8'))
         key = str(uuid.uuid4())
         cache_put(_zip_store, key, session['account_id'], buf.getvalue())
-        return jsonify(ok=True, key=key, citations=citation_report(data, settings['link_citations']))
+        return jsonify(ok=True, key=key, citations=citation_report(data, settings['link_citations']), apa=check_article(data, settings))
     except (ValueError, HTTPException):
         raise
     except Exception:
@@ -567,7 +578,7 @@ def process_docx():
         blob = generate_docx_from_form(data, figures, settings, assets)
         key = str(uuid.uuid4())
         cache_put(_docx_export_store, key, session['account_id'], blob)
-        return jsonify(ok=True, key=key, citations=citation_report(data, settings['link_citations']))
+        return jsonify(ok=True, key=key, citations=citation_report(data, settings['link_citations']), apa=check_article(data, settings))
     except (ValueError, HTTPException):
         raise
     except Exception:

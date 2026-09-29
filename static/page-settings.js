@@ -44,3 +44,22 @@
     }
   };
 })();
+
+/* APA 7 consistency report: plain text nodes only, never interpreted as HTML. */
+window.renderApaReport = report => {
+  const holder = document.getElementById('apa-result'); if (!holder) return;
+  holder.replaceChildren();
+  if (!report || !report.enabled) return;
+  const title = document.createElement('strong');
+  title.textContent = report.warnings.length ? 'APA 7 denetimi: ' + report.warnings.length + ' uyarı' : 'APA 7 denetimi: seçtiğiniz kurallara aykırı bir durum bulunamadı.';
+  holder.append(title);
+  if (!report.warnings.length) return;
+  const list = document.createElement('ul'); list.className = 'mb-0';
+  for (const item of report.warnings) {
+    const li = document.createElement('li');
+    li.textContent = item.message + (item.examples.length ? ' Örnek: ' + item.examples.join(' · ') : '') + (item.count > item.examples.length ? ' (toplam ' + item.count + ')' : '');
+    list.append(li);
+  }
+  const note = document.createElement('small'); note.textContent = 'Uyarılar otomatik değişiklik yapmaz; son kontrolde metni ve kaynakçayı gözden geçirin.';
+  holder.append(list, note);
+};

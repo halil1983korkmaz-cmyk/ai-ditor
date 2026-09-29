@@ -2328,7 +2328,8 @@ def generate_latex_from_form(data: dict, figure_file_bytes: dict,
     extra    = data.get('extra', {})
     refs_raw = data.get('references', '')
     from citation_links import CitationIndex
-    citation_refs = sorted([r.strip() for r in refs_raw.splitlines() if r.strip()], key=turkish_sort_key)
+    from apa_rules import ordered_references
+    citation_refs = ordered_references(data, js, turkish_sort_key)
     citations = CitationIndex(citation_refs, js['link_citations'])
 
     # ── Cover fields ──
@@ -2513,10 +2514,7 @@ def generate_latex_from_form(data: dict, figure_file_bytes: dict,
             body_lines.extend([r'\section*{' + heading + '}', escape(value), ''])
 
     # ── References — alphabetically sorted, hanging indent, no numbers ──
-    refs_lines = sorted(
-        [l.strip() for l in refs_raw.splitlines() if l.strip()],
-        key=turkish_sort_key
-    )
+    refs_lines = citation_refs
     refs_heading = 'References' if english_only else ('Kaynaklar' if js['template_id'] == 'scholarly' else r'Kaynakça / References')
     _ref_env_open = (
         r'\section*{' + refs_heading + r'}' + '\n'
@@ -2723,6 +2721,29 @@ def generate_latex_from_form(data: dict, figure_file_bytes: dict,
             compact_refs = compact_refs.replace(r'\section*{' + refs_heading + '}',
                                                 r'{\centering\bfseries ' + refs_heading + r'\par}\vspace{6pt}')
             tex = tex.replace(refs_tex, compact_refs)
+    if js['layout_mode'] == 'custom':
+        tex = _apply_custom_layout(tex, js)
+    return tex
+
+
+def _apply_custom_layout(tex: str, js: dict) -> str:
+    """Editor-defined margins, paragraph spacing and reference indent for the LaTeX body."""
+    geometry = (r'\geometry{a4paper,' + ','.join(f"{side}={js['margin_' + side + '_cm']:g}cm" for side in ('top', 'bottom', 'left', 'right')) + ',')
+    tex = re.sub(r'\\geometry\{a4paper,top=[^,]+,bottom=[^,]+,left=[^,]+,right=[^,]+,', lambda m: geometry, tex, count=1)
+    # LaTeX skips are not additive with Word's before/after, so use their sum between paragraphs.
+    skip = js['body_space_before_pt'] + js['body_space_after_pt']
+    block = ('% ── Paragraph format ──\n'
+             f"\\setlength{{\\parindent}}{{{js['body_first_line_indent_cm']:g}cm}}\n"
+             f"\\setlength{{\\parskip}}{{{skip:g}pt}}\n"
+             f"\\renewcommand{{\\baselinestretch}}{{{js['body_line_spacing']:g}}}")
+    tex = re.sub(r'% ── Paragraph format ──\n\\setlength\{\\parindent\}\{[^}]*\}\n\\setlength\{\\parskip\}\{[^}]*\}\n'
+                 r'\\renewcommand\{\\baselinestretch\}\{[^}]*\}', lambda m: block, tex, count=1)
+    if js['body_align'] == 'left':
+        tex = tex.replace(r'\begin{document}', r'\begin{document}' + '\n' + r'\raggedright', 1)
+    hanging = f"{js['ref_hanging_cm']:g}cm"
+    tex = tex.replace(r'\setlength{\leftmargin}{1.5em}%', r'\setlength{\leftmargin}{' + hanging + r'}%')
+    tex = tex.replace(r'\setlength{\itemindent}{-1.5em}%', r'\setlength{\itemindent}{-' + hanging + r'}%')
+    tex = tex.replace(r'\setlength{\itemsep}{3pt}%', r'\setlength{\itemsep}{' + f"{js['ref_space_before_pt'] + js['ref_space_after_pt']:g}" + r'pt}%')
     return tex
 
 

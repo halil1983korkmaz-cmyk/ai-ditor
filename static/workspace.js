@@ -123,7 +123,7 @@ window.journalWorkspace = (() => {
     }
   }
   function updatePreview() {
-    const values=collect();byId('scholarly-layout-note').hidden=values.template_id!=='scholarly';window.updateRunningPreview(values);byId('live-preview').replaceChildren(pageSketch(values.header_layout,values,assets.logo));
+    const values=collect();byId('scholarly-layout-note').hidden=values.template_id!=='scholarly';byId('layout-custom-fields').disabled=values.layout_mode!=='custom';window.updateRunningPreview(values);byId('live-preview').replaceChildren(pageSketch(values.header_layout,values,assets.logo));
     byId('journal-heading').textContent=values.journal_name_tr || values.journal_name_en || aiditorAccount?.display_name || 'Derginiz';
     const layout=(templates.length ? templates : localTemplates).find(item=>item.id===values.template_id)?.name || 'Özel';
     byId('journal-summary').textContent=`${layout} düzen · ${values.font_family || 'Palatino Linotype'} · ${values.body_size || 10} punto. Dergi ayarlarınız yeni girişlerde korunur.`;

@@ -37,6 +37,7 @@ jobs:
       - run: python tests/browser_downloads.py
       - run: python tests/browser_docx.py
       - run: python tests/browser_scholarly.py
+      - run: python tests/browser_layout_apa.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
