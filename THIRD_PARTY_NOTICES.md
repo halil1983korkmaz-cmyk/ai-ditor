@@ -1,6 +1,6 @@
 # Third-party components
 
-AI-ditor Plus source code is MIT licensed (see LICENSE). Dependencies retain their own licenses.
+GASTROIA Editor is derived from AI-ditor Plus by Alparslan Güvenç (MIT, see LICENSE). Its source code is MIT licensed. Dependencies retain their own licenses.
 
 PDF images in editable Word output are rendered locally using [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) and [PDFium](https://pdfium.googlesource.com/pdfium/). pypdfium2 uses Apache-2.0 or BSD-3-Clause; PDFium and its bundled dependencies include additional notices. Their license texts and binary build notices are distributed in the application under `pypdfium2-*.dist-info/licenses/` (macOS: inside Contents/Resources). No article contents are sent to an external conversion service.
 

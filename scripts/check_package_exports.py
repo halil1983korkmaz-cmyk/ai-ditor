@@ -44,7 +44,7 @@ def main():
                 deadline = time.monotonic() + 60
                 while time.monotonic() < deadline:
                     try:
-                        if json.loads(request('/health')).get('version') == '2.2.0':
+                        if json.loads(request('/health')).get('version') == '1.0.0':
                             break
                     except (OSError, ValueError):
                         if proc.poll() is not None:
@@ -54,8 +54,10 @@ def main():
                     raise RuntimeError('Packaged service did not start')
                 user = json.loads(request('/api/auth/register', json.dumps({'username': 'package_check', 'password': 'temporary-test-password', 'display_name': 'Package QA'}).encode(), 'POST', {'Content-Type': 'application/json', 'X-Aiditor-Request': '1'}))['user']
                 headers = {'X-Aiditor-Account': user['id'], 'X-Aiditor-Request': '1', 'Content-Type': 'application/json'}
+                bundled = json.loads(request('/api/journal', headers=headers))
+                assert bundled['settings']['journal_name_en'].startswith('GASTROIA') and set(bundled['assets']) == {'logo', 'license', 'cover', 'jenerik'}, 'bundled GASTROIA preset missing'
                 pdf = PdfWriter(); pdf.add_blank_page(width=60, height=40); buffer = io.BytesIO(); pdf.write(buffer)
-                setup = {'base_revision': 0, 'settings': {**next(t['settings'] for t in TEMPLATES if t['id'] == 'scholarly'), 'header_mode': 'odd_even', 'header_left': 'TEK', 'header_even_left': 'ÇİFT'}, 'assets': {'logo': {'name': 'logo.pdf', 'data': 'data:application/pdf;base64,' + base64.b64encode(buffer.getvalue()).decode()}}}
+                setup = {'base_revision': 0, 'settings': {**next(t['settings'] for t in TEMPLATES if t['id'] == 'scholarly'), 'header_mode': 'odd_even', 'header_left': 'TEK', 'header_even_left': 'ÇİFT'}, 'assets': {'license': None, 'logo': {'name': 'logo.pdf', 'data': 'data:application/pdf;base64,' + base64.b64encode(buffer.getvalue()).decode()}}}
                 request('/api/journal', json.dumps(setup).encode(), 'PUT', headers)
                 article = sample_article(); article['cover']['ethics'] = 'Bottom-anchored package note'; article['sections'][0]['content'] = 'Örnek (2026) bu biçimi incelemiştir.'
                 form = urllib.parse.urlencode({'data': json.dumps(article)}).encode()

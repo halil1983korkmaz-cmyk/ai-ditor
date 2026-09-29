@@ -205,6 +205,20 @@ class PresetTests(unittest.TestCase):
                       ' '.join(c.text for s in document.sections for t in s.first_page_header.tables for r in t.rows for c in r.cells))
 
 
+class DefaultsTests(unittest.TestCase):
+    def test_new_accounts_start_from_the_gastroia_preset(self):
+        with tempfile.TemporaryDirectory(prefix='aiditor-defaults-test-') as tmp:
+            app, _ = make_setup(Path(tmp))
+            app.config['GENERIC_DEFAULTS'] = False
+            client = app.test_client()
+            user = register(client, 'gastroia')
+            saved = client.get('/api/journal', headers=headers(user)).json
+            self.assertEqual(saved['settings']['journal_name_en'], 'GASTROIA Journal of Gastronomy and Travel Research')
+            self.assertEqual((saved['settings']['margin_top_cm'], saved['settings']['layout_mode']), (0.58, 'custom'))
+            self.assertEqual(set(saved['assets']), {'logo', 'license', 'cover', 'jenerik'})
+            app.config['GENERIC_DEFAULTS'] = True
+
+
 class ApiTests(unittest.TestCase):
     def test_apa_check_endpoint_and_saved_layout(self):
         with tempfile.TemporaryDirectory(prefix='aiditor-apa-test-') as tmp:

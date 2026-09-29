@@ -209,7 +209,7 @@ window.journalWorkspace = (() => {
   async function importPreset(file){
     if(!file)return;
     try{if(file.size>24*1024*1024)throw new Error('Ayar dosyası en fazla 24 MB olabilir.');const data=JSON.parse(await file.text());
-      if(data.format!=='aiditor-journal-preset' || data.version!==1 || !data.settings || typeof data.settings!=='object' || Array.isArray(data.settings))throw new Error('Geçerli bir AI-ditor Plus dergi ayarları yedeği seçin.');
+      if(data.format!=='aiditor-journal-preset' || data.version!==1 || !data.settings || typeof data.settings!=='object' || Array.isArray(data.settings))throw new Error('Geçerli bir GASTROIA Editor dergi ayarları yedeği seçin.');
       if(await replacePreset(data.settings,data.assets || {}))showToast('Dergi ayarları ve logolar hesabınıza aktarıldı.');
     }catch(error){showToast('Yedek açılamadı: '+error.message);}finally{byId('import-preset').value='';}
   }

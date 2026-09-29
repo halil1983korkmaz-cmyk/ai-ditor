@@ -1,4 +1,4 @@
-"""Native desktop window for the local-only AI-ditor Plus service."""
+"""Native desktop window for the local-only GASTROIA Editor service."""
 import base64
 import binascii
 import io
@@ -154,7 +154,7 @@ def run_desktop(server, on_started=None):
     webview.settings['OPEN_EXTERNAL_LINKS_IN_BROWSER'] = True
     downloads = ArticleDownloads()
     window = webview.create_window(
-        'AI-ditor Plus', f'http://127.0.0.1:{server.server_port}',
+        'GASTROIA Editor', f'http://127.0.0.1:{server.server_port}',
         width=1320, height=900, min_size=(760, 600),
         text_select=True, zoomable=True, confirm_close=False,
         background_color='#f5f3ee', js_api=downloads,

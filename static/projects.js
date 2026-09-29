@@ -126,7 +126,7 @@ async function loadProject(file) {
     let data = project?.data;
     if (!['aiditor-project','jgttr-project'].includes(project?.format) || project.version !== 1 || !data?.cover || !data?.abstract ||
         !['sections','authors','figtables'].every(key => Array.isArray(data[key]))) {
-      throw new Error('Bu dosya geçerli bir AI-ditor Plus projesi değil.');
+      throw new Error('Bu dosya geçerli bir GASTROIA Editor projesi değil.');
     }
     const prepared = prepareProjectFigures(project);
     const validation = new FormData();

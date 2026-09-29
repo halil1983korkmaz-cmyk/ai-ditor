@@ -1,4 +1,4 @@
-name: Test and build AI-ditor Plus
+name: Test and build GASTROIA Editor
 on:
   push:
     branches: [main]
@@ -57,8 +57,8 @@ jobs:
       - run: bash build_mac.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: AIditorPlus-macOS
-          path: dist/AIditorPlus_Installer.dmg
+          name: GastroiaEditor-macOS
+          path: dist/GastroiaEditor_Installer.dmg
   build-windows:
     name: Windows installer
     needs: [test, browser]
@@ -70,16 +70,16 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install -r requirements-desktop.txt pyinstaller
-      - run: python -m PyInstaller aiditor_plus_windows.spec --noconfirm
-      - run: python scripts/check_package_exports.py dist/AIditorPlus.exe
+      - run: python -m PyInstaller gastroia_editor_windows.spec --noconfirm
+      - run: python scripts/check_package_exports.py dist/GastroiaEditor.exe
       - name: Create installer
         run: |
           choco install innosetup --no-progress -y
-          iscc aiditor_plus_setup.iss
+          iscc gastroia_editor_setup.iss
       - uses: actions/upload-artifact@v4
         with:
-          name: AIditorPlus-Windows
-          path: dist/AIditorPlus_Setup.exe
+          name: GastroiaEditor-Windows
+          path: dist/GastroiaEditor_Setup.exe
   release:
     name: Publish tested release
     needs: [build-mac, build-windows]
@@ -90,25 +90,19 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: AIditorPlus-*
+          pattern: GastroiaEditor-*
           merge-multiple: true
           path: release/
       - name: Checksums
         run: cd release && sha256sum *.dmg *.exe > SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
-          name: AI-ditor Plus ${{ github.ref_name }}
+          name: GASTROIA Editor ${{ github.ref_name }}
           generate_release_notes: true
           body: |
-            Akademik dergi editörlerinin işlerini kolaylaştırmak için kâr amacı güdülmeden geliştirilen, MIT lisanslı açık kaynak uygulama.
+            GASTROIA Editor: GASTROIA dergisinin makale, jenerik ön sayfa ve sayı düzenlemeleri için masaüstü uygulaması. İlk açılışta hesap oluşturduğunuzda dergi ayarları GASTROIA şablonuyla hazır gelir (sayfa düzeni, APA 7 tercihleri, başlık bandı, kapak ve jenerik şablonu).
 
-            2.2.0: Word çıktısındaki ilk sayfa dipnotları artık özetin hemen ardından değil, sayfanın altında yer alır. Kapak notları sonraki sayfalarda tekrarlanmaz; özelleştirilmiş alt bilgi korunur. Önceden indirilen belgeleri uygulamadan yeniden oluşturun.
+            macOS 13 veya üzeri: DMG dosyasını açıp uygulamayı Applications klasörüne sürükleyin. Uygulama Apple noter onayına sahip değildir; ilk açılışta Sistem Ayarları → Gizlilik ve Güvenlik bölümünden izin vermeniz gerekebilir. Windows: GastroiaEditor_Setup.exe dosyasını çalıştırın; Microsoft Edge WebView2 gerekir. Windows SmartScreen imzasız kurulum için uyarı gösterebilir (Daha fazla bilgi → Yine de çalıştır).
 
-            Beşinci hazır şablon “Sosyal bilimler”: logolu gri künye, ortalanmış başlık, 2,5 cm yan kenar boşluğu, 1,5 satır aralığı ve ayrı sayfada İngilizce özet. Özelleştirilebilir “Extended Summary” başlığı ve üst bilgilerde otomatik sayfa aralığı. Word ve LaTeX desteği.
-
-            Dergi hesapları, kalıcı ön ayarlar, logolar, düzenlenebilir Word çıktısı, tek/çift sayfa üst ve alt bilgileri, atıftan kaynakçaya bağlantılar ve JSON yedekleri korunur. Word ile PDF arasında satır ve sayfa sonları değişebilir. MIT lisanslı ve kâr amacı gütmeyen akademik destek uygulamasıdır.
-
-            Hesaplar bu bilgisayardaki kuruluma aittir. Bulut hesabı veya cihazlar arası otomatik eşitleme yoktur.
-
-            macOS 13 veya üzeri: DMG dosyasını açıp uygulamayı Applications klasörüne sürükleyin. İlk açılışta macOS Gizlilik ve Güvenlik bölümünden uygulamaya izin vermeniz gerekebilir. Windows: Setup.exe dosyasını çalıştırın; WebView2 gerektirir. ZIP çıktısı Overleaf üzerinde XeLaTeX ile derlenir.
+            AI-ditor Plus (Alparslan Güvenç, MIT lisansı) tabanlıdır. Lisans ve üçüncü taraf bildirimleri kurulum paketinde yer alır.
           files: release/*

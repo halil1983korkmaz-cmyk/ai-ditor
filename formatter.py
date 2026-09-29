@@ -1,5 +1,5 @@
 """
-AI-ditor Plus Word → LaTeX Formatter
+GASTROIA Editor Word → LaTeX Formatter
 Converts manuscripts to configurable academic journal templates.
 Also supports structured form-based input (generate_latex_from_form).
 """
@@ -2789,7 +2789,7 @@ def build_zip_form(tex_content: str, logo_src: str, figure_file_bytes: dict,
             zf.writestr(asset_name(zipname), filebytes)
 
         readme = (
-            "AI-ditor Plus — Overleaf Yükleme Rehberi\n"
+            "GASTROIA Editor — Overleaf Yükleme Rehberi\n"
             "=================================================\n\n"
             "1. Bu ZIP dosyasını açın.\n"
             "2. Overleaf.com → New Project → Upload Project → ZIP'i seçin.\n"

@@ -25,10 +25,10 @@ def data_directory():
     if override:
         return Path(override).expanduser().resolve()
     if sys.platform == 'darwin':
-        return Path.home() / 'Library' / 'Application Support' / 'AI-ditor Plus'
+        return Path.home() / 'Library' / 'Application Support' / 'GASTROIA Editor'
     if sys.platform == 'win32':
-        return Path(os.environ.get('LOCALAPPDATA', Path.home() / 'AppData' / 'Local')) / 'AI-ditor Plus'
-    return Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local' / 'share')) / 'aiditor-plus'
+        return Path(os.environ.get('LOCALAPPDATA', Path.home() / 'AppData' / 'Local')) / 'GASTROIA Editor'
+    return Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local' / 'share')) / 'gastroia-editor'
 
 
 def check_id(value):
@@ -94,14 +94,14 @@ class AccountStore:
             db.execute('INSERT OR IGNORE INTO app_meta VALUES (?,?)', ('session_secret', secrets.token_hex(48)))
             return db.execute('SELECT value FROM app_meta WHERE key=?', ('session_secret',)).fetchone()['value']
 
-    def register(self, username, display_name, password, settings):
+    def register(self, username, display_name, password, settings, assets=None):
         owner = str(uuid.uuid4())
         password_hash = generate_password_hash(password, method='scrypt')
         now = _now()
         try:
             with closing(self._connect()) as db, db:
                 db.execute('INSERT INTO accounts VALUES (?,?,?,?,?)', (owner, username, display_name, password_hash, now))
-                db.execute('INSERT INTO journals VALUES (?,?,?,?,?)', (owner, _encode(settings), '{}', 0, now))
+                db.execute('INSERT INTO journals VALUES (?,?,?,?,?)', (owner, _encode(settings), _encode(assets or {}), 0, now))
         except sqlite3.IntegrityError as exc:
             raise DuplicateUsername('Bu kullanıcı adı zaten kullanılıyor.') from exc
         return dict(id=owner, username=username, display_name=display_name)

@@ -1,16 +1,15 @@
-# AI-ditor Plus görsel kimliği
+# GASTROIA Editor görsel kimliği
 
-Sade bir A monogramı ve üstte küçük bir artı işareti. Akademik yayıncılığın tipografik dilini taşıyan simge; arayüz, macOS ve Windows paketlerinde aynıdır.
+GASTROIA yeşili zemin üzerinde beyaz serifli bir G harfi ve altında ince bir çizgi. Simge arayüzde, macOS ve Windows paketlerinde aynıdır.
 
 | Kullanım | Renk |
 |---|---|
-| Zemin | Lacivert `#153449` |
-| A monogramı | Kırık beyaz `#F7F5EF` |
-| Artı işareti | Açık yeşil `#88C9BD` |
+| Zemin | GASTROIA yeşili `#9EC53C` |
+| G harfi ve çizgi | Beyaz `#FFFFFF` |
 
-Ana kaynak: [`static/brand.svg`](../static/brand.svg). Yazı tipi veya dış kaynağa bağlı değildir; tüm çizgiler vektör yollarıdır. Kenarlar dışında gerçek saydamlık vardır. Gölge, doku ve degrade kullanılmaz. Simgedeki boşluğu koruyun; yatay veya dikey esnetmeyin.
+Ana kaynak: [`static/brand.svg`](../static/brand.svg). SVG içindeki G harfi sistem serif yazı tipiyle çizilir; PNG/ICO/ICNS dosyaları `scripts/export_brand.py` ile üretilir. Kenarlar dışında gerçek saydamlık vardır. Gölge, doku ve degrade kullanılmaz. Simgedeki boşluğu koruyun; yatay veya dikey esnetmeyin.
 
-Üretim dosyaları: `aiditor_plus_icon.png` (1024 px), `icon_plus.icns` (macOS), `icon_plus.ico` (Windows). SVG değiştirildiğinde bu dosyaları yeniden üretin:
+Üretim dosyaları: `gastroia_editor_icon.png` (1024 px), `icon_gastroia.icns` (macOS), `icon_gastroia.ico` (Windows). SVG değiştirildiğinde bu dosyaları yeniden üretin:
 
 ```sh
 python -m pip install -r requirements-dev.txt

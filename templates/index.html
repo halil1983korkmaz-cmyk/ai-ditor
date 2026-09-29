@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI-ditor Plus</title>
+<title>GASTROIA Editor</title>
 <link rel="icon" type="image/svg+xml" href="/static/brand.svg">
 <link rel="stylesheet" href="/static/library.css">
 <link href="/static/vendor/bootstrap.min.css" rel="stylesheet">
@@ -280,7 +280,7 @@ textarea { resize:vertical; }
 <a class="skip-link" href="#main-workspace">Çalışma alanına geç</a>
 <nav class="navbar navbar-dark">
  <div class="container shell-width">
-  <a class="brand-lockup" href="/" aria-label="AI-ditor Plus ana sayfa"><img src="/static/brand.svg" alt="" width="42" height="42"><span><span class="navbar-brand">AI-ditor <b>Plus</b><small>{{ app_version }}</small></span><span class="brand-subtitle">Derginize ait bir çalışma alanı.</span></span></a>
+  <a class="brand-lockup" href="/" aria-label="GASTROIA Editor ana sayfa"><img src="/static/brand.svg" alt="" width="42" height="42"><span><span class="navbar-brand">AI-ditor <b>Plus</b><small>{{ app_version }}</small></span><span class="brand-subtitle">Derginize ait bir çalışma alanı.</span></span></a>
   <div id="account-controls" hidden><span id="account-name"></span><button type="button" id="logout-button" class="btn btn-sm btn-outline-light">Çıkış yap</button></div>
  </div>
 </nav>
@@ -705,7 +705,7 @@ textarea { resize:vertical; }
 </div><!-- /article-editor -->
 </section>
 </main>
-<footer class="site-footer container shell-width"><div><b>AI-ditor Plus</b> · Alparslan Güvenç</div><p>Akademik dergi editörlerinin işlerini kolaylaştırmak için, kâr amacı güdülmeden geliştirilmiştir. <a href="/license" target="_blank" rel="noopener">MIT lisansıyla açık kaynak.</a></p><small>Yazılım lisansı, derginizin veya makalenizin yayın lisansından bağımsızdır.</small></footer>
+<footer class="site-footer container shell-width"><div><b>GASTROIA Editor</b> · Alparslan Güvenç</div><p>Akademik dergi editörlerinin işlerini kolaylaştırmak için, kâr amacı güdülmeden geliştirilmiştir. <a href="/license" target="_blank" rel="noopener">MIT lisansıyla açık kaynak.</a></p><small>Yazılım lisansı, derginizin veya makalenizin yayın lisansından bağımsızdır.</small></footer>
 
 <div id="app-toast" class="app-toast" role="status" aria-live="polite"></div>
 <div id="section-order-status" class="visually-hidden" aria-live="polite"></div>
@@ -743,10 +743,10 @@ function setDocxImportStatus(kind, html) {
 
 function docxImportErrorMessage(error) {
   if (window.location.protocol === 'file:') {
-    return 'Bu sayfa doğrudan HTML dosyası olarak açılmış. Word aktarımı için güncel AI-ditor Plus uygulamasını çalıştırın.';
+    return 'Bu sayfa doğrudan HTML dosyası olarak açılmış. Word aktarımı için güncel GASTROIA Editor uygulamasını çalıştırın.';
   }
   if (error instanceof TypeError && /fetch|network|load/i.test(error.message || '')) {
-    return 'Yerel AI-ditor Plus servisine ulaşılamadı. Uygulamayı tamamen kapatıp güncel AI-ditor Plus sürümünü yeniden açın.';
+    return 'Yerel GASTROIA Editor servisine ulaşılamadı. Uygulamayı tamamen kapatıp güncel GASTROIA Editor sürümünü yeniden açın.';
   }
   return error.message || 'Word dosyası içe aktarılamadı.';
 }
@@ -850,11 +850,11 @@ async function handleDocxFile(file) {
     formData.append('article', file, file.name);
     const response = await aiditorFetch('/import_docx', {method:'POST', body:formData});
     if (response.status === 404) {
-      throw new Error('Çalışan AI-ditor Plus uygulaması Word aktarımını içermeyen eski bir sürüm. Güncel uygulamayı açın.');
+      throw new Error('Çalışan GASTROIA Editor uygulaması Word aktarımını içermeyen eski bir sürüm. Güncel uygulamayı açın.');
     }
     const contentType = response.headers.get('Content-Type') || '';
     if (!contentType.includes('application/json')) {
-      throw new Error('Word aktarım servisi geçerli bir yanıt vermedi. Güncel AI-ditor Plus uygulamasını yeniden açın.');
+      throw new Error('Word aktarım servisi geçerli bir yanıt vermedi. Güncel GASTROIA Editor uygulamasını yeniden açın.');
     }
     const result = await response.json();
     if (!response.ok || !result.ok) throw new Error(result.error || 'Word dosyası içe aktarılamadı.');
@@ -2040,7 +2040,7 @@ async function doGenerate(kind = 'zip') {
   document.getElementById('result-panel').style.display = 'none';
   document.getElementById('err-panel').style.display = 'none';
   try {
-    if (location.protocol === 'file:') throw new Error('HTML dosyası yerine AI-ditor Plus Başlat.command dosyasını çalıştırın ve http://127.0.0.1:5152 adresini açın.');
+    if (location.protocol === 'file:') throw new Error('HTML dosyası yerine GASTROIA Editor Başlat.command dosyasını çalıştırın ve http://127.0.0.1:5152 adresini açın.');
     const payload = collectFormData();
     if (!payload.cover.tr_title && !payload.cover.en_title) throw new Error('En az bir makale başlığı girin.');
 
@@ -2124,7 +2124,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (location.protocol === 'file:') {
     const notice = document.createElement('div');
     notice.style.cssText = 'padding:24px;background:#fff3cd;color:#333;font:18px system-ui;position:sticky;top:0;z-index:9999';
-    notice.append('Bu HTML dosyası tek başına çalışmaz. “AI-ditor Plus Başlat.command” dosyasını açın, ardından ');
+    notice.append('Bu HTML dosyası tek başına çalışmaz. “GASTROIA Editor Başlat.command” dosyasını açın, ardından ');
     const link = document.createElement('a');
     link.href = 'http://127.0.0.1:5152'; link.textContent = 'yerel uygulamaya geçin';
     notice.append(link); document.body.prepend(notice);

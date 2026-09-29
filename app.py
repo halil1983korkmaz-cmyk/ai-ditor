@@ -1,4 +1,4 @@
-"""AI-ditor Plus: a local, account-isolated academic journal workspace."""
+"""GASTROIA Editor: a local, account-isolated academic journal workspace."""
 import argparse
 import base64
 import binascii
@@ -28,7 +28,7 @@ from page_furniture import TOKENS, RUNNING_DEFAULTS
 from docx_export import generate_docx_from_form, DOCX_MIME
 from formatter import generate_latex_from_form, extract_form_data_from_docx, _normalize_table_model
 
-APP_VERSION = '2.2.0'
+APP_VERSION = '1.0.0'
 
 
 def resource_path(relative_path):
@@ -37,7 +37,7 @@ def resource_path(relative_path):
 
 app = Flask(__name__, template_folder=resource_path('templates'), static_folder=resource_path('static'))
 app.config.update(MAX_CONTENT_LENGTH=32 * 1024 * 1024, SESSION_COOKIE_HTTPONLY=True,
-                  SESSION_COOKIE_SAMESITE='Strict', SESSION_COOKIE_NAME='aiditor_plus_session',
+                  SESSION_COOKIE_SAMESITE='Strict', SESSION_COOKIE_NAME='gastroia_editor_session',
                   SESSION_REFRESH_EACH_REQUEST=False)
 app.secret_key = AccountStore().session_secret()
 _zip_store = {}
@@ -339,7 +339,7 @@ def local_requests_only():
         if urlsplit(request.host_url).hostname not in {'localhost', '127.0.0.1', '::1'}:
             raise ValueError
     except ValueError:
-        return jsonify(ok=False, error='AI-ditor Plus yalnızca yerel uygulama adresinden kullanılabilir.'), 403
+        return jsonify(ok=False, error='GASTROIA Editor yalnızca yerel uygulama adresinden kullanılabilir.'), 403
     if request.path.startswith('/api/articles'):
         request.max_content_length = 48 * 1024 * 1024
     if request.method not in {'GET', 'HEAD', 'OPTIONS'}:
@@ -348,7 +348,7 @@ def local_requests_only():
             if origin and (urlsplit(origin).netloc != request.host or urlsplit(origin).scheme != request.scheme):
                 raise ValueError
         except ValueError:
-            return jsonify(ok=False, error='İşlemi AI-ditor Plus uygulama sayfasından başlatın.'), 403
+            return jsonify(ok=False, error='İşlemi GASTROIA Editor uygulama sayfasından başlatın.'), 403
         if request.headers.get('X-Aiditor-Request') != '1':
             return jsonify(ok=False, error='İstek uygulama sayfasından gönderilmelidir.'), 403
     public = request.path in {'/', '/health', '/license', '/api/templates', '/api/auth/session', '/api/auth/register', '/api/auth/login'} or request.path.startswith('/static/')
@@ -409,7 +409,7 @@ def license_text():
 
 @app.route('/health')
 def health():
-    return jsonify(ok=True, app='AI-ditor Plus', version=APP_VERSION, storage='local')
+    return jsonify(ok=True, app='GASTROIA Editor', version=APP_VERSION, storage='local')
 
 
 @app.route('/api/auth/session')
@@ -429,13 +429,27 @@ def account_credentials(payload, registration=False):
     return username.strip().lower(), password, display.strip() if isinstance(display, str) else ''
 
 
+def gastroia_defaults(display_name=''):
+    """New accounts start from the bundled GASTROIA journal preset (settings, logo, cover, template)."""
+    if app.config.get('GENERIC_DEFAULTS') or os.environ.get('AIDITOR_GENERIC_DEFAULTS') == '1':
+        settings = default_settings()
+        settings['journal_name_tr'] = display_name
+        return settings, {}
+    try:
+        with open(resource_path('presets/gastroia-journal-preset.json'), encoding='utf-8') as stream:
+            preset = json.load(stream)
+        return normalize_settings(preset['settings']), validate_assets(preset.get('assets', {}))
+    except (OSError, ValueError, KeyError):
+        app.logger.exception('Bundled GASTROIA preset unavailable; using generic defaults')
+        return default_settings(), {}
+
+
 @app.route('/api/auth/register', methods=['POST'])
 def auth_register():
     username, password, display_name = account_credentials(json_object(), registration=True)
-    settings = default_settings()
-    settings['journal_name_tr'] = display_name
+    settings, assets = gastroia_defaults(display_name)
     try:
-        user = account_store().register(username, display_name, password, settings)
+        user = account_store().register(username, display_name, password, settings, assets)
     except DuplicateUsername as exc:
         return jsonify(ok=False, error=str(exc)), 409
     session.clear()
@@ -702,11 +716,11 @@ def process_form():
                 archive.writestr(filename, blob)
             archive.writestr('journal_settings.json', json.dumps(settings, ensure_ascii=False, indent=2).encode('utf-8'))
             archive.writestr('README_Overleaf.txt', (
-                'AI-ditor Plus — Overleaf Kullanımı\n\n'
+                'GASTROIA Editor — Overleaf Kullanımı\n\n'
                 '1. Overleaf → New Project → Upload Project ile bu ZIP dosyasını yükleyin.\n'
                 '2. Compiler ayarından XeLaTeX seçin.\n'
                 '3. Recompile ile PDF oluşturun ve sayfa düzenini kontrol edin.\n\n'
-                'AI-ditor Plus, akademik dergi editörlerinin işlerini kolaylaştırmak amacıyla\n'
+                'GASTROIA Editor, akademik dergi editörlerinin işlerini kolaylaştırmak amacıyla\n'
                 'kâr amacı güdülmeden geliştirilen, MIT lisanslı özgür bir uygulamadır.\n'
                 'Uygulamanın MIT lisansı makalenizin veya derginizin yayın lisansını değiştirmez.\n'
             ).encode('utf-8'))
@@ -810,7 +824,7 @@ def create_local_server(port=5051):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Yerel AI-ditor Plus dergi çalışma alanı')
+    parser = argparse.ArgumentParser(description='Yerel GASTROIA Editor dergi çalışma alanı')
     parser.add_argument('--port', type=int)
     parser.add_argument('--no-browser', action='store_true')
     parser.add_argument('--browser', action='store_true', help='Masaüstü penceresi yerine tarayıcıda aç')
@@ -823,7 +837,7 @@ if __name__ == '__main__':
             desktop_mode = False
     server = create_local_server(args.port if args.port is not None else (0 if desktop_mode else 5051))
     url = f'http://127.0.0.1:{server.server_port}'
-    print(f'AI-ditor Plus {APP_VERSION}: {url}', flush=True)
+    print(f'GASTROIA Editor {APP_VERSION}: {url}', flush=True)
     if desktop_mode:
         from desktop import run_desktop
         run_desktop(server)

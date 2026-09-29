@@ -56,3 +56,5 @@ session.key
 .qa/
 *.log
 baseline.patch
+
+!icon_gastroia.icns

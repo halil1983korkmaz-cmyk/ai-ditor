@@ -11,13 +11,14 @@ a = Analysis(
     datas=[
         (os.path.join(BASE, 'templates'), 'templates'),
         (os.path.join(BASE, 'static'), 'static'),
+        (os.path.join(BASE, 'presets'), 'presets'),
         (os.path.join(BASE, 'LICENSE'), '.'),
         (os.path.join(BASE, 'THIRD_PARTY_NOTICES.md'), '.'),
-        (os.path.join(BASE, 'aiditor_plus_icon.png'), '.'),
+        (os.path.join(BASE, 'gastroia_editor_icon.png'), '.'),
         (os.path.join(BASE, 'formatter.py'), '.'),
     ] + collect_data_files('webview') + collect_data_files('docx') + collect_data_files('pypdfium2') + collect_data_files('pypdfium2_raw') + copy_metadata('pypdfium2'),
     hiddenimports=[
-        'webview', 'webview.platforms.cocoa', 'desktop', 'sqlite3', 'account_store', 'journal_templates',
+        'webview', 'webview.platforms.cocoa', 'desktop', 'sqlite3', 'account_store', 'journal_templates', 'apa_rules', 'issue_export',
         'flask', 'flask.templating',
         'werkzeug', 'werkzeug.routing', 'werkzeug.serving',
         'werkzeug.exceptions', 'werkzeug.utils',
@@ -41,27 +42,27 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='AI-ditor Plus',
+    name='GASTROIA Editor',
     debug=False,
     strip=False,
     upx=False,
     console=False,
     argv_emulation=False,
-    icon=os.path.join(BASE, 'icon_plus.icns'),
+    icon=os.path.join(BASE, 'icon_gastroia.icns'),
 )
 
-collection = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name='AI-ditor Plus')
+collection = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name='GASTROIA Editor')
 
 app = BUNDLE(
     collection,
-    name='AI-ditor Plus.app',
-    icon=os.path.join(BASE, 'icon_plus.icns'),
+    name='GASTROIA Editor.app',
+    icon=os.path.join(BASE, 'icon_gastroia.icns'),
     bundle_identifier='com.aiditorplus.app',
     info_plist={
-        'CFBundleName':               'AI-ditor Plus',
-        'CFBundleDisplayName':        'AI-ditor Plus',
-        'CFBundleVersion':            '2.2.0',
-        'CFBundleShortVersionString': '2.2.0',
+        'CFBundleName':               'GASTROIA Editor',
+        'CFBundleDisplayName':        'GASTROIA Editor',
+        'CFBundleVersion':            '1.0.0',
+        'CFBundleShortVersionString': '1.0.0',
         'NSHighResolutionCapable':    True,
         'LSMinimumSystemVersion':     '13.0',
     },

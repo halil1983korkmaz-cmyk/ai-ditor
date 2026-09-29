@@ -20,7 +20,7 @@ PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4
 ASSET = {'name': 'journal.png', 'data': 'data:image/png;base64,' + base64.b64encode(PNG).decode()}
 
 def make_setup(tmp_path):
-    application.app.config.update(TESTING=True, AIDITOR_DATA_DIR=tmp_path, SECRET_KEY=AccountStore(tmp_path).session_secret())
+    application.app.config.update(TESTING=True, GENERIC_DEFAULTS=True, AIDITOR_DATA_DIR=tmp_path, SECRET_KEY=AccountStore(tmp_path).session_secret())
     application._zip_store.clear()
     application._docx_export_store.clear()
     application._docx_import_store.clear()
@@ -49,7 +49,7 @@ class TestAccounts(unittest.TestCase):
         app, directory = setup
         client = app.test_client()
         user = register(client)
-        cookie = client.get_cookie('aiditor_plus_session')
+        cookie = client.get_cookie('gastroia_editor_session')
         assert cookie.http_only and cookie.same_site == 'Strict'
         with closing(sqlite3.connect(directory / 'aiditor.sqlite3')) as db:
             stored = db.execute('SELECT password_hash FROM accounts').fetchone()[0]

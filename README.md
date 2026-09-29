@@ -1,20 +1,20 @@
-# AI-ditor Plus
+# GASTROIA Editor
 
-<img src="static/brand.svg" alt="AI-ditor Plus A+ logosu" width="112" height="112">
+<img src="static/brand.svg" alt="GASTROIA Editor logosu" width="112" height="112">
 
-**Her dergi için kendi düzeni, kaldığınız yerden devam eden bir çalışma alanı.**
+**GASTROIA dergisinin makale ve sayı düzenlemeleri için masaüstü uygulaması.**
 
-AI-ditor Plus, akademik dergi editörlerinin mizanpaj işlerini kolaylaştırmak için **kâr amacı güdülmeden** geliştirilmiş, **MIT lisanslı açık kaynak** bir masaüstü uygulamasıdır. Bir dergi hesabı oluşturun, örnek sayfa düzenlerinden birini seçin, derginizin kimliğini tanımlayın ve makalelerinizi aynı ön ayarlarla hazırlayın.
+GASTROIA Editor, Alparslan Güvenç'in MIT lisanslı açık kaynak uygulaması [AI-ditor Plus](https://github.com/alparslanguvenc/aiditor-plus) tabanında geliştirilmiştir. Yeni bir hesap oluşturduğunuzda dergi ayarları GASTROIA şablonuyla hazır gelir: A4, üst 0,58 cm / diğer kenarlar 2 cm, Times New Roman 11 punto, 12 nk paragraf aralığı, 1,15 satır aralığı, APA 7 tercihleri, başlık bandı, kapak görseli, lisans görseli ve boş jenerik şablonu. Makalelerinizi Word (.docx) olarak, sayıları jenerik ön sayfalarıyla birlikte Word olarak hazırlarsınız. PDF gerekiyorsa Word dosyasını Word'den PDF olarak kaydedin.
 
-Geliştirici: **Alparslan Güvenç** · [MIT lisansı](LICENSE) · [Sürüm notları](CHANGELOG.md)
+MIT lisansı, telif bildirimi ve üçüncü taraf bildirimleri korunur ([LICENSE](LICENSE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)). Orijinal geliştirici: **Alparslan Güvenç**.
 
 ## İndirme
 
-- [macOS kurulumu](https://github.com/alparslanguvenc/aiditor-plus/releases/latest/download/AIditorPlus_Installer.dmg)
-- [Windows kurulumu](https://github.com/alparslanguvenc/aiditor-plus/releases/latest/download/AIditorPlus_Setup.exe)
-- [Tüm sürümler ve dosya doğrulama özetleri](https://github.com/alparslanguvenc/aiditor-plus/releases)
+- [macOS kurulumu (.dmg)](https://github.com/halil1983korkmaz-cmyk/ai-ditor/releases/latest/download/GastroiaEditor_Installer.dmg)
+- [Windows kurulumu (.exe)](https://github.com/halil1983korkmaz-cmyk/ai-ditor/releases/latest/download/GastroiaEditor_Setup.exe)
+- [Tüm sürümler ve dosya doğrulama özetleri](https://github.com/halil1983korkmaz-cmyk/ai-ditor/releases)
 
-macOS 13 veya üzerinde DMG içindeki **AI-ditor Plus** uygulamasını **Applications** klasörüne sürükleyin. Windows'ta kurulum dosyasını çalıştırın. Uygulama kendi Python ortamını içerir; kaynak koddan çalıştırmıyorsanız Python kurulumu gerekmez. Windows masaüstü penceresi Microsoft Edge WebView2 kullanır. macOS uygulaması Apple noter onayına sahip değildir; ilk açılışta Sistem Ayarları → Gizlilik ve Güvenlik bölümünden izin vermenizi isteyebilir.
+macOS 13 veya üzerinde DMG içindeki **GASTROIA Editor** uygulamasını **Applications** klasörüne sürükleyin; uygulama Apple noter onayına sahip olmadığı için ilk açılışta Sistem Ayarları → Gizlilik ve Güvenlik bölümünden izin vermeniz gerekebilir. Windows'ta kurulum dosyasını çalıştırın; kurulum imzasız olduğundan SmartScreen uyarı verirse **Daha fazla bilgi → Yine de çalıştır** deyin. Windows penceresi Microsoft Edge WebView2 kullanır. Uygulama kendi Python ortamını içerir. İlk açılışta bir kullanıcı adı ve parola ile hesap oluşturun; GASTROIA ayarları otomatik yüklenir.
 
 ## Kenar boşlukları, paragraf aralıkları ve APA 7 ayarları
 
@@ -86,15 +86,15 @@ Word aktarımı düzenleme başlangıcıdır; resim olarak çizilmiş tablolar, 
 
 ## Hesaplar ve veriler nerede?
 
-Hesaplar **bu bilgisayardaki AI-ditor Plus kurulumuna aittir**. E-posta doğrulaması, bulut hesabı, cihazlar arasında otomatik eşitleme veya internet üzerinden ortak düzenleme bulunmaz. Amaç dergi ön ayarlarını ve makale taslaklarını düzenli biçimde saklamaktır. Uygulama yalnızca yerel bilgisayar adresinde çalışır.
+Hesaplar **bu bilgisayardaki GASTROIA Editor kurulumuna aittir**. E-posta doğrulaması, bulut hesabı, cihazlar arasında otomatik eşitleme veya internet üzerinden ortak düzenleme bulunmaz. Amaç dergi ön ayarlarını ve makale taslaklarını düzenli biçimde saklamaktır. Uygulama yalnızca yerel bilgisayar adresinde çalışır.
 
 Veriler uygulama paketinin dışında tutulduğu için sürüm güncellemesi dergi ayarlarını silmez:
 
 | Sistem | Varsayılan veri klasörü |
 | --- | --- |
-| macOS | `~/Library/Application Support/AI-ditor Plus/` |
-| Windows | `%LOCALAPPDATA%/AI-ditor Plus/` |
-| Linux | `$XDG_DATA_HOME/aiditor-plus/` veya `~/.local/share/aiditor-plus/` |
+| macOS | `~/Library/Application Support/GASTROIA Editor/` |
+| Windows | `%LOCALAPPDATA%/GASTROIA Editor/` |
+| Linux | `$XDG_DATA_HOME/gastroia-editor/` veya `~/.local/share/gastroia-editor/` |
 
 Başka bilgisayara geçerken dergi ön ayarlarını ve makale projelerini JSON olarak dışa aktarın, yeni kurulumda hesap oluşturup dosyaları içe aktarın. Tam yerel yedek için uygulama kapalıyken veri klasörünün tamamını kopyalayın. Parolalar açık metin olarak saklanmaz; bu yerel hesap sistemi işletim sistemi düzeyindeki disk erişiminin yerine geçmez.
 

@@ -1,21 +1,21 @@
-; Inno Setup script for AI-ditor Plus (Windows)
-; Build with: iscc aiditor_plus_setup.iss
+; Inno Setup script for GASTROIA Editor (Windows)
+; Build with: iscc gastroia_editor_setup.iss
 
-#define MyAppName "AI-ditor Plus"
-#define MyAppVersion "2.2.0"
-#define MyAppPublisher "Alparslan Guvenc"
-#define MyAppExeName "AIditorPlus.exe"
+#define MyAppName "GASTROIA Editor"
+#define MyAppVersion "1.0.0"
+#define MyAppPublisher "GASTROIA"
+#define MyAppExeName "GastroiaEditor.exe"
 
 [Setup]
-AppId={{B3E1A4F2-9C7D-4E8B-AF2E-12345678ABCD}
+AppId={{6F0C2D8A-4B1E-4C57-9A3D-7E5A1B9C2F44}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=dist
-OutputBaseFilename=AIditorPlus_Setup
-SetupIconFile=icon_plus.ico
+OutputBaseFilename=GastroiaEditor_Setup
+SetupIconFile=icon_gastroia.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

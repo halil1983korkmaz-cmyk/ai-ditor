@@ -24,9 +24,9 @@ def main() -> None:
             page.screenshot(path=str(png), omit_background=True)
             browser.close()
         with Image.open(png) as master:
-            master.save(ROOT / 'aiditor_plus_icon.png', optimize=True)
-            master.save(ROOT / 'icon_plus.icns', format='ICNS')
-            master.save(ROOT / 'icon_plus.ico', format='ICO',
+            master.save(ROOT / 'gastroia_editor_icon.png', optimize=True)
+            master.save(ROOT / 'icon_gastroia.icns', format='ICNS')
+            master.save(ROOT / 'icon_gastroia.ico', format='ICO',
                         sizes=[(size, size) for size in (16, 24, 32, 48, 64, 128, 256)])
     print('Exported PNG (1024), ICNS (16–1024), and ICO (16–256).')
 

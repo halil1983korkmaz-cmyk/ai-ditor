@@ -30,7 +30,7 @@ class Server:
         self.proc = None
     def start(self):
         self.log = open(Path(self.data) / 'browser-server.log', 'w+', encoding='utf-8')
-        env = dict(os.environ, AIDITOR_DATA_DIR=self.data, PYTHONDONTWRITEBYTECODE='1', PYTHONUNBUFFERED='1')
+        env = dict(os.environ, AIDITOR_GENERIC_DEFAULTS='1', AIDITOR_DATA_DIR=self.data, PYTHONDONTWRITEBYTECODE='1', PYTHONUNBUFFERED='1')
         packaged = os.environ.get('AIDITOR_TEST_APP')
         command = [packaged] if packaged else [sys.executable, 'app.py']
         port = '0'
@@ -46,7 +46,7 @@ class Server:
                 try:
                     with urllib.request.urlopen(self.url+'/health',timeout=1) as response:
                         health=json.load(response)
-                    if health.get('app')=='AI-ditor Plus' and health.get('version')=='2.2.0':return self.url
+                    if health.get('app')=='GASTROIA Editor' and health.get('version')=='1.0.0':return self.url
                 except (OSError,ValueError):pass
             self.log.seek(0)
             content=self.log.read()

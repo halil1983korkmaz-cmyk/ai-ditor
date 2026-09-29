@@ -1,5 +1,9 @@
 # Sürüm geçmişi
 
+## 1.0.0 — GASTROIA Editor
+
+Uygulama **GASTROIA Editor** adıyla yeniden markalandı (yeni simge, uygulama ve kurulum adları, veri klasörü). Yeni hesaplar GASTROIA ön ayarıyla başlar: sayfa düzeni, APA 7 tercihleri, başlık bandı, kapak ve lisans görseli, boş jenerik şablonu. macOS (.dmg) ve Windows (.exe) kurulum paketleri sürüm etiketiyle GitHub Actions üzerinden üretilir. Aşağıdaki geliştirmeler bu sürüme dahildir. Orijinal proje: AI-ditor Plus 2.2.0 (Alparslan Güvenç, MIT).
+
 ## Yayımlanmamış — kenar boşlukları, paragraf aralıkları ve APA 7 ayarları
 
 Dergi ayarlarına iki bölüm eklendi. **Kenar boşlukları ve paragraf** bölümünde “Şablona göre / Özel değerler” seçimi vardır; özel değerlerde dört kenar boşluğu, üst/alt bilgi uzaklığı, paragraf öncesi ve sonrası aralık, satır aralığı, ilk satır girintisi, başlık puntosu ve aralıkları, tablo/şekil başlığı ve tablo metni puntosu, dipnot puntosu ile kaynakça asılı girintisi, aralığı ve puntosu Word çıktısına uygulanır; LaTeX çıktısında sayfa boşlukları, paragraf biçimi ve kaynakça girintisi kullanılır. Varsayılan “Şablona göre” seçiminde mevcut şablonların çıktısı değişmez. **APA 7 kuralları** bölümü iki yazar arası bağlaç (&, ve, and), üç ve üzeri yazar için vd./et al., sayfa göstergesi (s./ss., p./pp.), t.y./n.d., kaynakçada en çok yazar sayısı ve kaynakça sıralamasını belirler. Çıktı sonrasında ve `/api/apa_check` ile bu tercihlere göre yalnızca uyarı veren, metni değiştirmeyen APA 7 denetimi çalışır.
