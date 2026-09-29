@@ -83,7 +83,7 @@ jobs:
   release:
     name: Publish tested release
     needs: [build-mac, build-windows]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -97,7 +97,9 @@ jobs:
         run: cd release && sha256sum *.dmg *.exe > SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
-          name: GASTROIA Editor ${{ github.ref_name }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.0' }}
+          target_commitish: ${{ github.sha }}
+          name: GASTROIA Editor ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.0' }}
           generate_release_notes: true
           body: |
             GASTROIA Editor: GASTROIA dergisinin makale, jenerik ön sayfa ve sayı düzenlemeleri için masaüstü uygulaması. İlk açılışta hesap oluşturduğunuzda dergi ayarları GASTROIA şablonuyla hazır gelir (sayfa düzeni, APA 7 tercihleri, başlık bandı, kapak ve jenerik şablonu).
